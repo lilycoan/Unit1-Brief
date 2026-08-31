@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Your AI Footprint</title>
+<meta name="description" content="See the carbon and water footprint of your own AI use — pick a persona, adjust your usage, and ask the orb a question about what it means.">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div class="wrap">
+
+  <header class="hero">
+    <div class="hero-text">
+      <h1>Your AI footprint</h1>
+      <p class="dek">
+        A few prompts a day adds up to a carbon and water cost — usually a much smaller one than people
+        assume. Pick the persona closest to how you use AI, adjust it to match your real day, and see
+        exactly where it lands next to everyday things. Ask the orb anything about the numbers.
+      </p>
+    </div>
+    <div class="orb-dock">
+      <button type="button" id="orb" class="orb" aria-label="Ask the AI footprint assistant a question">
+        <span class="orb-core"></span>
+        <svg class="orb-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3Z" stroke="currentColor" stroke-width="1.6"/>
+          <path d="M6 11v1a6 6 0 0 0 12 0v-1M12 18v3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+        </svg>
+      </button>
+      <p class="orb-hint" id="orb-hint">Ask about your footprint</p>
+    </div>
+  </header>
+
+  <div class="orb-panel" id="orb-panel" hidden>
+    <div class="orb-panel-head">
+      <span id="orb-status">Listening…</span>
+      <button type="button" class="orb-close" id="orb-close" aria-label="Close">×</button>
+    </div>
+    <div class="orb-log" id="orb-log" aria-live="polite"></div>
+    <form id="orb-form" class="orb-typeform" hidden>
+      <input type="text" id="orb-typein" placeholder="Type your question instead…" autocomplete="off">
+      <button type="submit">Ask</button>
+    </form>
+  </div>
+
+  <nav class="personas" aria-label="Usage personas">
+    <div class="personas-row" id="personas"></div>
+  </nav>
+
+  <div class="metric-toggle" role="group" aria-label="Footprint type">
+    <button type="button" class="metric-btn is-active" data-metric="carbon">🌍 Carbon</button>
+    <button type="button" class="metric-btn" data-metric="water">💧 Water</button>
+  </div>
+
+  <main class="tool">
+    <section class="panel panel-in" aria-label="Your daily AI use">
+      <div class="panel-head">
+        <h2>Your AI use</h2>
+        <span class="panel-head-sub">per day</span>
+      </div>
+      <div class="rows-head" aria-hidden="true">
+        <span>Model</span><span>Reply length</span><span>Per day</span><span></span>
+      </div>
+      <div class="rows" id="rows"></div>
+      <button type="button" class="addrow" id="addrow">+ add another</button>
+      <div class="tools-row">
+        <button type="button" class="link" id="reset">Reset</button>
+        <span class="sep">·</span>
+        <button type="button" class="link" id="share">Copy link</button>
+      </div>
+    </section>
+
+    <section class="panel panel-out" aria-label="How it compares">
+      <div class="verdict" id="verdict"></div>
+      <div class="donut-wrap">
+        <div class="donut" id="donut"></div>
+        <ul class="donut-legend" id="donut-legend"></ul>
+      </div>
+    </section>
+  </main>
+
+  <section class="chart-section" aria-label="A day of your AI use vs everyday things">
+    <h2>A day of your AI use, next to everyday things</h2>
+    <div class="hbars" id="daily-bars"></div>
+  </section>
+
+  <section class="chart-section split" aria-label="A year of AI use, next to bigger choices">
+    <div class="split-col">
+      <h2 id="add-title">In a year, things that add this much</h2>
+      <div class="hbars hbars--compact" id="add-bars"></div>
+    </div>
+    <div class="split-col">
+      <h2 id="cut-title">In a year, cuts that would save this much</h2>
+      <div class="hbars hbars--compact" id="cut-bars"></div>
+    </div>
+  </section>
+
+  <section class="context-line" aria-label="Your personal footprint">
+    <p>
+      Compared against someone in
+      <select id="loc"></select> who lives in
+      <select id="home"></select>, drives
+      <select id="drive"></select>, eats
+      <select id="diet"></select>, and flies
+      <select id="fly"></select>.
+    </p>
+  </section>
+
+  <details class="method">
+    <summary>How these numbers are made</summary>
+    <div class="method-body">
+      <p>
+        Per-prompt energy, carbon, and water figures come from the open-source
+        <a href="https://ecologits.ai/" target="_blank" rel="noopener">EcoLogits</a> library (v0.10). Carbon is
+        priced on the electricity grid of the region you compare against, plus EcoLogits' embodied hardware
+        emissions. Water is EcoLogits' blue-water (freshwater actually consumed) figure. Training is excluded —
+        split across all users it adds very little to any one person's footprint.
+      </p>
+      <p>
+        Everyday and yearly comparison figures (diet, driving, flights, home energy, coffee, flights, lawns, and
+        so on) are drawn from EPA, EIA, Ember, Our World in Data, Poore &amp; Nemecek (2018), Wynes &amp; Nicholas
+        (2017), the Founders Pledge Climate &amp; Lifestyle report, and the Water Footprint Network. Full citation
+        list and methodology adapted from Andy Masley's
+        <a href="https://andymasley.com/visuals/ai-prompt-footprint/" target="_blank" rel="noopener">AI prompt footprint calculator</a>,
+        used under his public-domain (CC0) release.
+      </p>
+    </div>
+  </details>
+
+</div>
+
+<template id="row-tpl">
+  <div class="row">
+    <select class="row-model"></select>
+    <select class="row-size"></select>
+    <input type="number" class="row-count" min="0" step="1" inputmode="numeric">
+    <button type="button" class="row-remove" aria-label="Remove row">×</button>
+  </div>
+</template>
+
+<script src="app.js"></script>
+</body>
+</html>
