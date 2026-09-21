@@ -27,6 +27,23 @@
       rows: [['gpt-5.5-pro', 'report', 2], ['claude-opus-4-8', 'agent-heavy', 2], ['gpt-5.5', 'chat', 30]] },
     { id: 'team',     label: 'Small company / team', icon: '🏢',
       rows: [['gpt-5.5', 'chat', 10], ['gpt-5.5', 'email', 5], ['gpt-5.5', 'summary', 2]] },
+
+    // Reference employee profiles (research.md). Quantities are illustrative,
+    // set with the user in planning (plan.md, "Preset quantities"); the page
+    // labels them so. A row's optional 4th element holds extra row fields.
+    { id: 'alex', label: 'Alex, video editor', icon: '🎬', profile: true, loc: 'us',
+      rows: [['gpt-5.5', 'chat', 10]],
+      media: [['image', 'standard', 10], ['video', 'mid', 20]],
+      streaming: { tv: 2, laptop: 1, phone: 1 } },
+    { id: 'jordan', label: 'Jordan, creative technologist', icon: '🧪', profile: true, loc: 'us',
+      rows: [['gpt-5.5', 'agent-heavy', 1, { project: 20 }], ['claude-sonnet-4-6', 'chat', 10]],
+      media: [['image', 'draft', 5]],
+      streaming: { laptop: 1 },
+      calls: { hours: 2, device: 'laptop', camera: 'on' } },
+    { id: 'robin', label: 'Robin, operations manager', icon: '📋', profile: true, loc: 'us',
+      rows: [['gpt-5.5', 'chat', 2]],
+      streaming: { tv: 2, phone: 1 },
+      calls: { hours: 4, device: 'laptop', camera: 'on' } },
   ];
 
   // ==========================================================================
@@ -147,10 +164,11 @@
     const persona = PERSONAS.find((x) => x.id === id);
     if (!persona) return;
     state.persona = id;
-    state.rows = persona.rows.map(([model, size, count]) => newRow(model, size, count));
+    state.rows = persona.rows.map(([model, size, count, extra]) => newRow(model, size, count, extra));
     state.media = (persona.media || []).map(([type, tier, amount]) => newMediaRow(type, tier, amount));
     state.streaming = Object.assign(noStreaming(), persona.streaming || {});
     state.calls = Object.assign(noCalls(), persona.calls || {});
+    if (persona.loc) state.loc = persona.loc;
     if (!(opts && opts.silent)) render();
   }
 
@@ -218,16 +236,18 @@
   // ==========================================================================
   const $ = (id) => document.getElementById(id);
 
+  // Presets in two rows: the general AI-use presets, then the three
+  // illustrative employee profiles after their label.
   function renderPersonas() {
-    const host = $('personas');
-    host.innerHTML = '';
+    $('personas').innerHTML = '';
+    $('profiles').querySelectorAll('.persona-btn').forEach((b) => b.remove());
     PERSONAS.forEach((p) => {
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'persona-btn' + (state.persona === p.id ? ' is-active' : '');
       btn.textContent = `${p.icon} ${p.label}`;
       btn.addEventListener('click', () => { applyPersona(p.id); saveToUrl(); });
-      host.appendChild(btn);
+      $(p.profile ? 'profiles' : 'personas').appendChild(btn);
     });
   }
 
@@ -795,12 +815,21 @@
       log.scrollTop = log.scrollHeight;
       return div;
     }
+    // The page's current results for the orb: both totals as ranges, and the
+    // inputs that drive each range most (spec: pass the new totals as context).
     function currentContext() {
-      const daily = aiDaily(state.metric);
+      const yearly = (r) => ({ low: r.low * DAYS, central: r.central * DAYS, high: r.high * DAYS });
+      const names = (rows) => Calc.drivers(rows, state.metric, getLoc().grid, 3).map((d) => d.label).join(', ') || 'none';
+      const ai = aiRange(state.metric);
+      const other = otherRange(state.metric);
       return {
         metric: state.metric,
-        dailyValue: fmtMetric(daily),
-        annualValue: fmtMetric(daily * DAYS),
+        aiDaily: fmtRange(ai),
+        aiYearly: fmtRange(yearly(ai)),
+        aiDrivers: names(aiRows()),
+        otherDaily: other.high > 0 ? fmtRange(other) : 'nothing entered',
+        otherYearly: other.high > 0 ? fmtRange(yearly(other)) : 'nothing entered',
+        otherDrivers: names(otherRows()),
         persona: state.persona || 'custom',
         region: getLoc().label,
       };

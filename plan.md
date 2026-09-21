@@ -80,6 +80,8 @@ Ranges come first, so each feature is built range-aware and needs no rework. Age
 - **Feature 4 limitations still to place (step 8).** Shown on the page now: no laptop call measurement, estimates differ by up to about 50×, device manufacturing excluded, the server proxy, and borrowed ranges. Still to go in the method panel: the phone is one low-end 2021 model, the 3.85 V battery voltage is our assumption, camera-off was measured with the screen off, and both Mytton and Guennebaud caution against per-GB figures.
 - **Drivers and glossary (step 6).** Each driver shows its swing in the selected metric plus its energy swing, e.g. "Cache-read cost: a swing of 308 g CO₂e (811 Wh) from its low to its high". The spec's example writes "±811 Wh", but 811 Wh is the full low-to-high change, not a ± half-width, so the page says "swing … from its low to its high". The glossary opens from buttons in the results card and the method panel (not `#` links, which would overwrite the share-link hash).
 - **Glossary sources (step 6), settled 2026-09-21 (user chose to find and verify).** "g CO₂e" cites the IPCC AR6 WG1 glossary (new research entry 27, read in the PDF); "blue water" cites the Water Footprint Network glossary (new entry 28). EPA pages checked had no standalone CO₂e definition. Units and the project's own terms have no source.
+- **Whole calculator (step 7).** The Alex, Jordan, and Robin presets sit in their own row after the label "Profiles, illustrative; adjust to your own day:" and set the location to the US; every preset now sets every input (AI rows, media, streaming, calls). The orb receives both totals as ranges plus each total's top three drivers; its system prompt tells it to stay neutral, treat low and high as outer bounds, point to the method panel and glossary, and say when it isn't sure.
+- **Orb answer length: open finding, not changed (step 7).** `api/ask.js` calls `claude-sonnet-5` with `max_tokens: 300` and no `thinking` setting; on Sonnet 5 that means adaptive thinking is on, and thinking tokens count toward the 300, so a harder question could cut the spoken answer short. Options: set `thinking: {type: "disabled"}` (answers are short and spoken), or raise `max_tokens`. Left for the user to decide; outside step 7's scope.
 - **Sources pending user review.** Research entries 1, 13, 24, and 26, added during specification, and 27 and 28, added in step 6, are still marked pending. This doesn't block the build, but it is part of verification.
 
 ## Checklist
@@ -143,10 +145,10 @@ Replace or expand the implementation placeholders below with tasks specific to t
 - [ ] Checkpoint: acceptance checks 5.1–5.7 pass, including the worked example
 
 **Step 7: Whole calculator**
-- [ ] Add the Alex, Jordan, and Robin presets with the quantities in the Approach section, labelled illustrative
+- [x] Add the Alex, Jordan, and Robin presets with the quantities in the Approach section, labelled illustrative
 - [x] Update the existing presets: "Software engineer" gets 3 light sessions, "AI power user" gets 2 heavy sessions (done early, in step 2; see Revisions)
-- [ ] Extend "Copy link" to save and restore every new input
-- [ ] Rewrite the opening text and the orb system prompt neutrally; pass the new totals to the orb as context
+- [x] Extend "Copy link" to save and restore every new input
+- [x] Rewrite the opening text and the orb system prompt neutrally; pass the new totals to the orb as context
 - [ ] Checkpoint: the whole-calculator checks pass: neutral text, presets, `npx serve .` with the orb API down, and share-link round-trip
 
 **Step 8: Citations and method panel**

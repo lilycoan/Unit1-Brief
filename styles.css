@@ -279,3 +279,7 @@ a { color: var(--terracotta); }
 .method { background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 18px; font-size: 0.88rem; color: var(--text-soft); }
 .method summary { cursor: pointer; color: var(--text); font-weight: 600; }
 .method-body { margin-top: 10px; display: flex; flex-direction: column; gap: 10px; }
+
+/* Illustrative profile presets */
+#profiles { margin-top: 8px; align-items: center; }
+.profiles-label { font-size: 0.8rem; color: var(--text-soft); margin-right: 4px; }

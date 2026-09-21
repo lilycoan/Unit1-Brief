@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Your AI Footprint</title>
-<meta name="description" content="See the carbon and water footprint of your own AI use — pick a persona, adjust your usage, and ask the orb a question about what it means.">
+<meta name="description" content="Estimate the energy, carbon, and water of your AI use and everyday digital activities, as ranges with their sources.">
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -15,9 +15,10 @@
     <div class="hero-text">
       <h1>Your AI footprint</h1>
       <p class="dek">
-        A few prompts a day adds up to a carbon and water cost — usually a much smaller one than people
-        assume. Pick the persona closest to how you use AI, adjust it to match your real day, and see
-        exactly where it lands next to everyday things. Ask the orb anything about the numbers.
+        Estimate the energy, carbon, and water of your AI use (text, images, video, and coding agents) and
+        see it next to your streaming and video calls. Every result is a low · central · high range with
+        its sources, so you can judge the numbers for yourself. Pick a profile, adjust it to your day, or
+        ask the orb about the numbers.
       </p>
     </div>
     <div class="orb-dock">
@@ -46,6 +47,7 @@
 
   <nav class="personas" aria-label="Usage personas">
     <div class="personas-row" id="personas"></div>
+    <div class="personas-row" id="profiles"><span class="profiles-label">Profiles, illustrative; adjust to your own day:</span></div>
   </nav>
 
   <div class="metric-toggle" role="group" aria-label="Footprint type">
