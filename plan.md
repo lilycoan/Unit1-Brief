@@ -86,8 +86,8 @@ Replace or expand the implementation placeholders below with tasks specific to t
 > Approved by the user on 2026-09-21 as part of the full plan. Tasks follow the build order in the Approach section. Each step ends in a user checkpoint and a commit.
 
 **Step 0: Refactor (no behavior change)**
-- [ ] Move `MODELS`, `SIZES`, locations, and comparison tables into `data.js`; move the calculations into `calc.js`; load both from `index.html` before `app.js`
-- [ ] Add `test/acceptance.js` with a pass/fail printer and a baseline check that current text-row results are unchanged
+- [x] Move `MODELS`, `SIZES`, locations, and comparison tables into `data.js`; move the calculations into `calc.js`; load both from `index.html` before `app.js`
+- [x] Add `test/acceptance.js` with a pass/fail printer and a baseline check that current text-row results are unchanged
 - [ ] Checkpoint: the page renders and calculates as before (screenshot comparison); the script runs
 
 **Step 1: Range core**
