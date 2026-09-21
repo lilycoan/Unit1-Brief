@@ -52,13 +52,13 @@ approx('5 GPT-5.5 chatbot replies, water (L)', Calc.aiDaily(rows('gpt-5.5:chat:5
 // Daily totals shown on the page before the refactor (captured 2026-09-21
 // from the rendered verdict line for each existing preset, US grid unless
 // stated). Tolerance = half the last digit the page displayed.
+// Retired in Step 2: the "Software engineer" and "AI power user" baselines,
+// which used the removed fixed "agent" size (spec feature 2 replaces it).
 const BASELINE = [
   // [preset rows, location, carbon g, tol, water L, tol]
   ['gpt-5.5:chat:5', 'us', 5.4, 0.05, 0.048, 0.0005],
   ['claude-sonnet-4-6:chat:8,claude-sonnet-4-6:summary:3', 'us', 3.2, 0.05, 0.029, 0.0005],
   ['gpt-5.5:report:2,claude-opus-4-8:long:1,gpt-5.5:chat:10', 'us', 64, 0.5, 0.587, 0.0005],
-  ['claude-sonnet-4-6:agent:3,claude-sonnet-4-6:chat:15', 'us', 241, 0.5, 2.2, 0.05],
-  ['gpt-5.5-pro:report:2,claude-opus-4-8:agent:2,gpt-5.5:chat:30', 'us', 1300, 50, 12, 0.5],
   ['gpt-5.5:chat:10,gpt-5.5:email:5,gpt-5.5:summary:2', 'us', 15, 0.5, 0.129, 0.0005],
   ['gpt-5.5:chat:5', 'in', 9.7, 0.05, 0.048, 0.0005],
 ];
@@ -99,7 +99,7 @@ approx('5 GPT-5.5 chatbot replies, high water (L)', chat5Water.high, 5 * 12.9047
   const bad = [];
   for (const m of D.MODELS) for (const size of Object.keys(m.sizes)) for (const metric of ['carbon', 'water']) {
     for (const loc of D.LOCATIONS) {
-      const r = Calc.textRowRange({ model: m.id, size, count: 1 }, metric, loc.grid);
+      const r = Calc.rowRange({ model: m.id, size, count: 1 }, metric, loc.grid);
       n++;
       if (!(r.low <= r.central && r.central <= r.high)) bad.push(`${m.id}/${size}/${metric}/${loc.id}`);
     }
@@ -114,7 +114,7 @@ approx('5 GPT-5.5 chatbot replies, high water (L)', chat5Water.high, 5 * 12.9047
   for (const metric of ['carbon', 'water']) {
     const total = Calc.aiRange(rs, metric, US);
     for (const lvl of ['low', 'central', 'high']) {
-      const sum = rs.reduce((s, r) => s + Calc.textRowRange(r, metric, US)[lvl], 0);
+      const sum = rs.reduce((s, r) => s + Calc.rowRange(r, metric, US)[lvl], 0);
       approx(`researcher preset ${metric} total ${lvl} = sum of rows`, total[lvl], sum, 1e-9);
     }
   }
@@ -136,6 +136,88 @@ approx('text rows: vary an unrelated input → stays central',
   const z = Calc.aiRange(rows('gpt-5.5:chat:0'), 'carbon', US);
   check('zero prompts → 0 · 0 · 0', z.low === 0 && z.central === 0 && z.high === 0, `${z.low} · ${z.central} · ${z.high}`);
 }
+
+// --------------------------------------------------------------------------
+section('Feature 2: agent sessions (spec 2.1–2.6)');
+// --------------------------------------------------------------------------
+
+// Hand calculation, heavy session at central values: 10,000,000 tokens split
+// 3.6% fresh / 96% cache read / 0.4% output = 360,000 / 9,600,000 / 40,000.
+//   Wh = (360,000 × 0.32 + 9,600,000 × 0.32 × 10% + 40,000 × 0.96) ÷ 1,000 × 1.10
+//      = (115.2 + 307.2 + 38.4) × 1.10 = 506.88 Wh
+const heavy1 = [{ model: 'gpt-5.5', size: 'agent-heavy', count: 1, project: 20 }];
+const light1 = [{ model: 'gpt-5.5', size: 'agent-light', count: 1, project: 20 }];
+
+// 2.1: one heavy session per day — 506.9 Wh, ~192.6 g CO2e (US), ~1.95 L.
+approx('2.1 heavy session, central energy (Wh)', Calc.aiDaily(heavy1, 'energy', US), 506.9, 0.05);
+approx('2.1 heavy session, central carbon, US (g)', Calc.aiDaily(heavy1, 'carbon', US), 192.6, 0.05);
+approx('2.1 heavy session, central water (L)', Calc.aiDaily(heavy1, 'water', US), 1.95, 0.005);
+
+// 2.2: one light session per day — 30.0 Wh.
+approx('2.2 light session, central energy (Wh)', Calc.aiDaily(light1, 'energy', US), 30.0, 0.05);
+
+// 2.3: advanced mode with the heavy tier's token counts at the 10% setting
+// equals the heavy tier — for every level and metric.
+{
+  const custom = [{ model: 'gpt-5.5', size: 'agent-custom', count: 1, fresh: 360000, cache: 9600000, output: 40000, cacheSetting: 0.10 }];
+  for (const metric of ['energy', 'carbon', 'water']) {
+    const a = Calc.aiRange(custom, metric, US);
+    const b = Calc.aiRange(heavy1, metric, US);
+    check(`2.3 custom tokens = heavy tier (${metric}, low · central · high)`,
+      Calc.LEVELS.every((l) => Math.abs(a[l] - b[l]) < 1e-9), `${round(a.low)} · ${round(a.central)} · ${round(a.high)}`);
+  }
+}
+
+// 2.4: a project of 20 heavy sessions is ~10,138 Wh central, and the daily
+// and yearly totals don't change when the project count changes.
+approx('2.4 project of 20 heavy sessions, central (Wh)', Calc.projectRange(heavy1[0], 'energy', US).central, 10138, 0.5);
+{
+  const before = Calc.aiRange(heavy1, 'carbon', US);
+  const after = Calc.aiRange([{ ...heavy1[0], project: 500 }], 'carbon', US);
+  check('2.4 changing project count leaves the daily total unchanged',
+    Calc.LEVELS.every((l) => before[l] === after[l]), `project 20 → 500: ${round(before.central)} → ${round(after.central)} g`);
+}
+
+// 2.5: other factors central — heavy session ~203 Wh at 1%, ~1,014 Wh at 25%.
+approx('2.5 heavy session, cache-read at 1% (Wh)',
+  Calc.aiDaily(heavy1, 'energy', US, { vary: 'cacheRead', varyLevel: 'low' }), 203, 0.5);
+approx('2.5 heavy session, cache-read at 25% (Wh)',
+  Calc.aiDaily(heavy1, 'energy', US, { vary: 'cacheRead', varyLevel: 'high' }), 1014, 0.5);
+// Same via advanced mode: the user's setting becomes the central value.
+approx('2.5 advanced mode at the 1% setting, central (Wh)',
+  Calc.aiDaily([{ model: 'gpt-5.5', size: 'agent-custom', count: 1, fresh: 360000, cache: 9600000, output: 40000, cacheSetting: 0.01 }], 'energy', US), 203, 0.5);
+{
+  // In advanced mode the range still spans 1–25% whatever the setting.
+  const r = Calc.aiRange([{ model: 'gpt-5.5', size: 'agent-custom', count: 1, fresh: 360000, cache: 9600000, output: 40000, cacheSetting: 0.25 }], 'energy', US);
+  const h = Calc.aiRange(heavy1, 'energy', US);
+  check('2.5 advanced mode at 25%: low and high still span 1–25%', r.low === h.low && r.high === h.high, `${round(r.low)} · ${round(r.central)} · ${round(r.high)} Wh`);
+}
+
+// 2.6: changing the model on an agent row doesn't change its result.
+{
+  const vals = D.MODELS.map((m) => Calc.aiDaily([{ ...heavy1[0], model: m.id }], 'carbon', US));
+  check(`2.6 heavy session gives the same result on all ${vals.length} models`, vals.every((v) => v === vals[0]), `${round(vals[0])} g each`);
+}
+
+// Spec feature 5 worked example (AI part): one heavy session, US grid —
+// 76.3 · 192.6 · 1,195 g CO2e per day.
+{
+  const r = Calc.aiRange(heavy1, 'carbon', US);
+  approx('worked example: AI low (g)', r.low, 76.3, 0.05);
+  approx('worked example: AI central (g)', r.central, 192.6, 0.05);
+  approx('worked example: AI high (g)', r.high, 1195, 0.5);
+}
+// Energy swing of each input for one heavy session (used by the driver list
+// in Step 6): cache-read 811 Wh, provider factor 602 Wh, PUE 217 Wh.
+for (const [input, swing] of [['cacheRead', 811], ['providerFactor', 602], ['pue', 217]]) {
+  const lo = Calc.aiDaily(heavy1, 'energy', US, { vary: input, varyLevel: 'low' });
+  const hi = Calc.aiDaily(heavy1, 'energy', US, { vary: input, varyLevel: 'high' });
+  approx(`worked example: ${input} swing (Wh)`, hi - lo, swing, 0.5);
+}
+
+// Removed size: a row with the old fixed 'agent' size contributes nothing
+// (the page drops such rows from old share links with a notice).
+approx('old "agent" size row contributes 0', Calc.aiDaily(rows('claude-sonnet-4-6:agent:3'), 'carbon', US), 0, 0);
 
 // --------------------------------------------------------------------------
 console.log(`\n${passed} passed, ${failed} failed`);

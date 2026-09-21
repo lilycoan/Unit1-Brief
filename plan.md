@@ -71,6 +71,7 @@ Ranges come first, so each feature is built range-aware and needs no rework. Age
   Existing presets: "Software engineer" moves from 3 old Sonnet agent sessions to 3 light sessions; "AI power user" moves from 2 old Opus agent sessions to 2 heavy sessions. The other existing presets are unchanged.
 - **Range layout (step 1), settled 2026-09-21 (user chose option 1).** Each row shows its per-day range on a small line under its inputs; the "Your AI use" daily and yearly range sits under the verdict sentence. All three numbers in a range share one unit.
 - **Embodied carbon has no range in 48 of 72 EcoLogits entries (found in step 1).** For those, `embmin` = `emb` = `embmax`, so only the energy part of a text row's carbon varies. To be stated in the method panel (step 8).
+- **Agent row layout (step 2), settled 2026-09-21 (user chose option 1).** Agent sessions are chosen from the reply-length dropdown (light, heavy, or "enter tokens"). The model dropdown greys out as "not model-specific", and a box under the row shows energy, carbon, and water ranges, the project readout (default 20 sessions), the cross-checks, and, in custom mode, the token inputs, cache-read setting, and formula. Input and output per-token factors move together as one input, "Per-token energy (provider type)", which reproduces the spec's 602 Wh driver.
 - **Sources pending user review.** Research entries 1, 13, 24, and 26, added during specification, are still marked pending. This doesn't block the build, but it is part of verification.
 
 ## Checklist
@@ -99,11 +100,11 @@ Replace or expand the implementation placeholders below with tasks specific to t
 - [ ] Checkpoint: the text rows show ranges, and low ≤ central ≤ high holds
 
 **Step 2: Agent sessions (feature 2)**
-- [ ] Declare the per-token factors, cache-read setting, PUE, water factors, and the light and heavy tiers in `data.js`
-- [ ] Remove the fixed "agent" size; add agent rows in tier mode and advanced token mode, labelled "not model-specific"
-- [ ] Add the project readout (sessions × per-session value), kept out of the daily and yearly totals
-- [ ] Show the tier labels (token count and calls), the advanced-mode formula, and the cross-checks (Couch 41 Wh, Hausfather 600 Wh)
-- [ ] Old share links with an `agent` row: drop the row and show the one-line notice (user's choice A)
+- [x] Declare the per-token factors, cache-read setting, PUE, water factors, and the light and heavy tiers in `data.js`
+- [x] Remove the fixed "agent" size; add agent rows in tier mode and advanced token mode, labelled "not model-specific"
+- [x] Add the project readout (sessions × per-session value), kept out of the daily and yearly totals
+- [x] Show the tier labels (token count and calls), the advanced-mode formula, and the cross-checks (Couch 41 Wh, Hausfather 600 Wh)
+- [x] Old share links with an `agent` row: drop the row and show the one-line notice (user's choice A)
 - [ ] Checkpoint: acceptance checks 2.1–2.6 pass
 
 **Step 3: Generated media (feature 1)**
@@ -135,7 +136,7 @@ Replace or expand the implementation placeholders below with tasks specific to t
 
 **Step 7: Whole calculator**
 - [ ] Add the Alex, Jordan, and Robin presets with the quantities in the Approach section, labelled illustrative
-- [ ] Update the existing presets: "Software engineer" gets 3 light sessions, "AI power user" gets 2 heavy sessions
+- [x] Update the existing presets: "Software engineer" gets 3 light sessions, "AI power user" gets 2 heavy sessions (done early, in step 2; see Revisions)
 - [ ] Extend "Copy link" to save and restore every new input
 - [ ] Rewrite the opening text and the orb system prompt neutrally; pass the new totals to the orb as context
 - [ ] Checkpoint: the whole-calculator checks pass: neutral text, presets, `npx serve .` with the orb API down, and share-link round-trip
@@ -166,6 +167,9 @@ Replace or expand the implementation placeholders below with tasks specific to t
 Record material changes to the approach, sequence, or checklist and explain why they were made.
 
 - **2026-09-21, initial draft.** Structure, build order, and four planning decisions (comparison charts, text-row driver, old share links, preset quantities) set with the user during planning. No changes to `spec.md`.
+- **2026-09-21, step 2: preset update moved earlier.** Removing the fixed "agent" size would have broken the "Software engineer" and "AI power user" presets, so their switch to 3 light and 2 heavy sessions (planned for step 7) was done in step 2. The two step 0 baseline test rows that used the old size were retired. Result: "Software engineer" falls from 241 to 39 g CO₂e per day (US, central); "AI power user" stays about 1.3 kg.
+- **2026-09-21, step 2: typing no longer drops focus (user approved).** The original calculator rebuilt every row on each keystroke, so a number box lost focus after one character (confirmed on the pre-project code). Typing now updates results in place; rows are rebuilt only when their structure changes.
+- **2026-09-21, step 2: range units follow the central value.** A range's shared unit is now chosen from its central value rather than its high end, so a heavy session reads "76 · 193 · 1,195 g CO₂e" rather than "0.076 · 0.19 · 1.2 kg CO₂e". Text-row displays were unchanged.
 
 ## Commands
 

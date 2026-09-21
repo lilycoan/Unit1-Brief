@@ -5,6 +5,7 @@
   const {
     MODELS, SIZES, LOCATIONS, HOMES, DRIVING, DIETS, FLYING,
     DAILY_ITEMS, ANNUAL_ITEMS, DAYS,
+    INPUTS, AGENT_SIZES, CACHE_SETTINGS, AGENT_CROSS_CHECKS,
   } = window.FootprintData;
   const Calc = window.FootprintCalc;
 
@@ -19,9 +20,9 @@
     { id: 'researcher', label: 'Daily researcher', icon: '🔬',
       rows: [['gpt-5.5', 'report', 2], ['claude-opus-4-8', 'long', 1], ['gpt-5.5', 'chat', 10]] },
     { id: 'engineer', label: 'Software engineer', icon: '💻',
-      rows: [['claude-sonnet-4-6', 'agent', 3], ['claude-sonnet-4-6', 'chat', 15]] },
+      rows: [['claude-sonnet-4-6', 'agent-light', 3], ['claude-sonnet-4-6', 'chat', 15]] },
     { id: 'power',    label: 'AI power user', icon: '⚡',
-      rows: [['gpt-5.5-pro', 'report', 2], ['claude-opus-4-8', 'agent', 2], ['gpt-5.5', 'chat', 30]] },
+      rows: [['gpt-5.5-pro', 'report', 2], ['claude-opus-4-8', 'agent-heavy', 2], ['gpt-5.5', 'chat', 30]] },
     { id: 'team',     label: 'Small company / team', icon: '🏢',
       rows: [['gpt-5.5', 'chat', 10], ['gpt-5.5', 'email', 5], ['gpt-5.5', 'summary', 2]] },
   ];
@@ -31,16 +32,56 @@
   // ==========================================================================
   let uidSeq = 1;
   const state = { rows: [], metric: 'carbon', persona: 'casual', loc: 'us', home: 'med', drive: 'davg', diet: 'avg', fly: 'some' };
+  // One-line message shown above the rows (e.g. an old share link was changed).
+  let notice = '';
+
+  // Every row carries the agent fields too, so switching a row's length to an
+  // agent session has sensible defaults: a 20-session project, and custom
+  // token counts that start at the heavy tier's split at the 10% setting.
+  function newRow(model, size, count, extra) {
+    return Object.assign(
+      { id: uidSeq++, model, size, count, project: 20, fresh: 360000, cache: 9600000, output: 40000, cacheSetting: 0.10 },
+      extra || {});
+  }
+
+  // Share-link row format (fields separated by ':'):
+  //   text rows    model:size:count
+  //   agent tiers  model:size:count:project
+  //   custom agent model:agent-custom:count:project:fresh:cache:output:cacheSetting
+  // Rows with the removed fixed 'agent' size are dropped with a notice
+  // (plan.md, "Old share links", user's choice A).
+  function rowFromLink(chunk) {
+    const [model, size, count, project, fresh, cache, output, setting] = chunk.split(':');
+    const num = (v, dflt) => (v === undefined || v === '' || !isFinite(Number(v)) ? dflt : Math.max(0, Number(v)));
+    const row = newRow(model, size, num(count, 0));
+    if (Calc.isAgentSize(size)) {
+      row.project = num(project, row.project);
+      if (size === 'agent-custom') {
+        row.fresh = num(fresh, row.fresh);
+        row.cache = num(cache, row.cache);
+        row.output = num(output, row.output);
+        row.cacheSetting = CACHE_SETTINGS.includes(Number(setting)) ? Number(setting) : row.cacheSetting;
+      }
+    }
+    return row;
+  }
+  function rowToLink(r) {
+    const base = `${r.model}:${r.size}:${r.count}`;
+    if (!Calc.isAgentSize(r.size)) return base;
+    if (r.size !== 'agent-custom') return `${base}:${r.project}`;
+    return `${base}:${r.project}:${r.fresh}:${r.cache}:${r.output}:${r.cacheSetting}`;
+  }
 
   function loadFromUrl() {
     try {
       const p = new URLSearchParams(location.hash.slice(1));
       const r = p.get('r');
       if (r) {
-        state.rows = r.split(',').filter(Boolean).map((chunk) => {
-          const [model, size, count] = chunk.split(':');
-          return { id: uidSeq++, model, size, count: Number(count) || 0 };
-        });
+        const all = r.split(',').filter(Boolean).map(rowFromLink);
+        state.rows = all.filter((row) => row.size !== 'agent');
+        if (state.rows.length < all.length) {
+          notice = "An old 'agent session' row was removed because the method changed. Add an agent session to include it.";
+        }
         state.persona = null;
       }
       ['metric', 'loc', 'home', 'drive', 'diet', 'fly'].forEach((k) => {
@@ -51,7 +92,7 @@
   }
   function saveToUrl() {
     const p = new URLSearchParams();
-    p.set('r', state.rows.map((r) => `${r.model}:${r.size}:${r.count}`).join(','));
+    p.set('r', state.rows.map(rowToLink).join(','));
     p.set('metric', state.metric);
     p.set('loc', state.loc); p.set('home', state.home); p.set('drive', state.drive);
     p.set('diet', state.diet); p.set('fly', state.fly);
@@ -62,7 +103,7 @@
     const persona = PERSONAS.find((x) => x.id === id);
     if (!persona) return;
     state.persona = id;
-    state.rows = persona.rows.map(([model, size, count]) => ({ id: uidSeq++, model, size, count }));
+    state.rows = persona.rows.map(([model, size, count]) => newRow(model, size, count));
     if (!(opts && opts.silent)) render();
   }
 
@@ -72,7 +113,8 @@
   const getLoc = () => Calc.getLocation(state.loc);
   const aiDaily = (metric) => Calc.aiDaily(state.rows, metric, getLoc().grid);
   const aiRange = (metric) => Calc.aiRange(state.rows, metric, getLoc().grid);
-  const rowRange = (row, metric) => Calc.textRowRange(row, metric, getLoc().grid);
+  const rowRange = (row, metric) => Calc.rowRange(row, metric, getLoc().grid);
+  const projectRange = (row, metric) => Calc.projectRange(row, metric, getLoc().grid);
   const rowShares = (metric) => Calc.rowShares(state.rows, metric, getLoc().grid);
   const dailyFootprint = (metric) => Calc.dailyFootprint(state, metric);
   const itemDaily = Calc.itemDaily;
@@ -90,8 +132,10 @@
     if (a >= 0.1) return String(Math.round(n * 100) / 100);
     return String(Number(n.toPrecision(2)));
   }
-  // Display unit for a value (g carbon or L water), chosen by its size.
+  // Display unit for a value (Wh energy, g carbon, or L water), chosen by its size.
+  // Energy stays in Wh so it reads directly against the spec and cross-checks.
   function unitFor(v, metric) {
+    if (metric === 'energy') return { unit: 'Wh', conv: (x) => x };
     if (metric === 'carbon') {
       if (v >= 1e6) return { unit: 't CO₂e', conv: (x) => x / 1e6 };
       if (v >= 1000) return { unit: 'kg CO₂e', conv: (x) => x / 1000 };
@@ -100,14 +144,14 @@
     if (v >= 1) return { unit: 'L', conv: (x) => x };
     return { unit: 'mL', conv: (x) => x * 1000 };
   }
-  function fmtMetric(v) {
-    const u = unitFor(v, state.metric);
+  function fmtMetric(v, metric) {
+    const u = unitFor(v, metric || state.metric);
     return sig(u.conv(v)) + ' ' + u.unit;
   }
-  // "low · central · high unit" — all three in the unit that fits the high end,
-  // so the numbers can be compared at a glance.
-  function fmtRange(r) {
-    const u = unitFor(r.high, state.metric);
+  // "low · central · high unit" — all three in the unit that fits the central
+  // value, so the numbers can be compared at a glance.
+  function fmtRange(r, metric) {
+    const u = unitFor(r.central, metric || state.metric);
     return [r.low, r.central, r.high].map((v) => sig(u.conv(v))).join(' · ') + ' ' + u.unit;
   }
 
@@ -136,30 +180,105 @@
   }
 
   const modelOptionsHtml = MODELS.map((m) => `<option value="${m.id}">${m.name}</option>`).join('');
-  const sizeOptionsHtml = SIZES.map((s) => `<option value="${s.id}">${s.label}</option>`).join('');
+  const sizeOptionsHtml = SIZES.map((s) => `<option value="${s.id}">${s.label}</option>`).join('') +
+    '<optgroup label="Agent sessions (not model-specific)">' +
+    AGENT_SIZES.map((s) => `<option value="${s.id}">${s.label}${s.detail ? ' · ' + s.detail : ''}</option>`).join('') +
+    '</optgroup>';
+  const pct = (x) => `${Math.round(x * 100)}%`;
+  const srcText = (sources) => `source${sources.length > 1 ? 's' : ''} ${sources.join(', ')}`;
 
+  // The agent-session box under an agent row: inputs (project sessions; token
+  // counts and cache-read setting in custom mode) plus result slots that
+  // fillRowOutputs() updates in place.
+  function agentDetailHtml(row) {
+    const tier = Calc.getAgentSize(row.size);
+    const f = INPUTS.providerFactor.central;
+    const custom = row.size === 'agent-custom';
+    const tokenInputs = custom ? `
+      <div class="agent-tokens">
+        <label>Fresh-input tokens <input type="number" min="0" step="1000" data-field="fresh" value="${row.fresh}"></label>
+        <label>Cache-read tokens <input type="number" min="0" step="1000" data-field="cache" value="${row.cache}"></label>
+        <label>Output tokens <input type="number" min="0" step="1000" data-field="output" value="${row.output}"></label>
+        <label>Cache-read cost <select data-field="cacheSetting">${CACHE_SETTINGS.map((c) =>
+          `<option value="${c}"${c === row.cacheSetting ? ' selected' : ''}>${pct(c)} of fresh input</option>`).join('')}</select></label>
+      </div>
+      <p class="agent-formula">Wh per session = (fresh × ${f.input} + cache reads × ${f.input} × ${pct(row.cacheSetting)} + output × ${f.output}) ÷ 1,000 × PUE ${INPUTS.pue.central}
+        <span class="range-key">central values; low and high use cache-read ${pct(INPUTS.cacheRead.low)}–${pct(INPUTS.cacheRead.high)}, per-token ${INPUTS.providerFactor.low.input}–${INPUTS.providerFactor.high.input} (input) and ${INPUTS.providerFactor.low.output}–${INPUTS.providerFactor.high.output} (output) Wh per 1,000 tokens, PUE ${INPUTS.pue.low}–${INPUTS.pue.high}</span></p>` : '';
+    const xchecks = AGENT_CROSS_CHECKS.map((c) =>
+      `${c.label} ${sig(c.wh)} Wh${c.range ? ` (${sig(c.range[0])}–${sig(c.range[1])})` : ''} (${srcText(c.sources)})`).join(' · ');
+    return `
+      <p class="agent-head">${tier.label} · <strong>not model-specific</strong>${tier.detail ? ' · ' + tier.detail : ''} · ${srcText(tier.sources)}</p>
+      ${tokenInputs}
+      <div class="agent-results">
+        <span class="range-period">Energy</span><span data-out="energy"></span>
+        <span class="range-period">Carbon</span><span data-out="carbon"></span>
+        <span class="range-period">Water</span><span data-out="water"></span>
+      </div>
+      <p class="agent-project">Project: <input type="number" min="0" step="1" data-field="project" value="${row.project}"> sessions →
+        <span data-out="project"></span> <span class="range-key">not added to daily or yearly totals</span></p>
+      <p class="agent-xcheck">Per session: this estimate <span data-out="session"></span> · ${xchecks}</p>
+      <p class="agent-note">Estimated from per-token factors and prices; no source measures agent-session energy directly.</p>`;
+  }
+
+  // Result text for one row, written into its existing DOM node. Called on
+  // every value change, so typing never rebuilds the inputs (keeps focus).
+  function fillRowOutputs(node, row) {
+    const first = row === state.rows[0];
+    if (!Calc.isAgentSize(row.size)) {
+      // Per-day range in the selected metric; the first row says which number is which.
+      node.querySelector('.row-range').innerHTML = fmtRange(rowRange(row, state.metric)) +
+        (first ? ' <span class="range-key">low · central · high, per day</span>' : '');
+      return;
+    }
+    const out = (name) => node.querySelector(`[data-out="${name}"]`);
+    for (const metric of ['energy', 'carbon', 'water']) {
+      out(metric).innerHTML = fmtRange(rowRange(row, metric), metric) +
+        (metric === 'energy' ? ` <span class="range-key">low · central · high, per day (${sig(row.count)} session${row.count === 1 ? '' : 's'})</span>` : '');
+    }
+    const proj = projectRange(row, 'energy');
+    out('project').textContent = `${fmtRange(proj, 'energy')} (${fmtRange(projectRange(row, state.metric))})`;
+    out('session').textContent = `${fmtMetric(Calc.agentSessionWh(row, Calc.SCENARIOS.central), 'energy')} central`;
+  }
+
+  // Rebuilds the row inputs. Only called when the rows' structure changes
+  // (add, remove, a dropdown, a preset, the metric); typing calls onValues().
   function renderRows() {
     const host = $('rows');
     host.innerHTML = '';
     const tpl = $('row-tpl');
     state.rows.forEach((row) => {
       const node = tpl.content.firstElementChild.cloneNode(true);
+      node.dataset.rowId = row.id;
+      const agent = Calc.isAgentSize(row.size);
       const modelSel = node.querySelector('.row-model');
       const sizeSel = node.querySelector('.row-size');
       const countInput = node.querySelector('.row-count');
-      modelSel.innerHTML = modelOptionsHtml;
+      // Agent rows ignore the model, so the dropdown is greyed out; the row
+      // keeps its model in case the user switches back to a text length.
+      modelSel.innerHTML = agent ? '<option>Not model-specific</option>' : modelOptionsHtml;
+      modelSel.disabled = agent;
+      if (!agent) modelSel.value = row.model;
       sizeSel.innerHTML = sizeOptionsHtml;
-      modelSel.value = row.model;
       sizeSel.value = row.size;
       countInput.value = row.count;
-      // Per-day range for this row in the selected metric; the first row also
-      // says which number is which.
-      node.querySelector('.row-range').innerHTML = fmtRange(rowRange(row, state.metric)) +
-        (row === state.rows[0] ? ' <span class="range-key">low · central · high, per day</span>' : '');
+      countInput.setAttribute('aria-label', agent ? 'Sessions per day' : 'Per day');
+      const detail = node.querySelector('.agent-detail');
+      if (agent) detail.innerHTML = agentDetailHtml(row);
+      detail.hidden = !agent;
+      node.querySelector('.row-range').hidden = agent;
+      fillRowOutputs(node, row);
 
       modelSel.addEventListener('change', () => { row.model = modelSel.value; state.persona = null; render(); saveToUrl(); });
       sizeSel.addEventListener('change', () => { row.size = sizeSel.value; state.persona = null; render(); saveToUrl(); });
-      countInput.addEventListener('input', () => { row.count = Math.max(0, Number(countInput.value) || 0); state.persona = null; render(); saveToUrl(); });
+      countInput.addEventListener('input', () => { row.count = Math.max(0, Number(countInput.value) || 0); onValues(); });
+      // Agent-box inputs: numbers update in place; the cache-read setting
+      // changes the formula text, so it rebuilds.
+      detail.querySelectorAll('input[data-field]').forEach((inp) => {
+        inp.addEventListener('input', () => { row[inp.dataset.field] = Math.max(0, Number(inp.value) || 0); onValues(); });
+      });
+      detail.querySelectorAll('select[data-field]').forEach((sel) => {
+        sel.addEventListener('change', () => { row[sel.dataset.field] = Number(sel.value); state.persona = null; render(); saveToUrl(); });
+      });
       node.querySelector('.row-remove').addEventListener('click', () => {
         state.rows = state.rows.filter((r) => r.id !== row.id);
         state.persona = null;
@@ -167,6 +286,24 @@
       });
       host.appendChild(node);
     });
+  }
+
+  // A typed value changed: refresh every number on the page without
+  // rebuilding the inputs, so the box being typed in keeps focus.
+  function onValues() {
+    state.persona = null;
+    renderPersonas();
+    state.rows.forEach((row) => {
+      const node = $('rows').querySelector(`[data-row-id="${row.id}"]`);
+      if (node) fillRowOutputs(node, row);
+    });
+    renderResults();
+    saveToUrl();
+  }
+
+  function renderNotice() {
+    $('notice').hidden = !notice;
+    $('notice-text').textContent = notice;
   }
 
   function renderVerdict() {
@@ -297,14 +434,20 @@
     $('fly').innerHTML = optHtml(FLYING, state.fly);
   }
 
-  function render() {
-    renderPersonas();
-    renderMetricToggle();
-    renderRows();
+  // Everything computed from the rows (not the row inputs themselves).
+  function renderResults() {
     renderVerdict();
     renderDonut();
     renderDailyBars();
     renderYearBars();
+  }
+
+  function render() {
+    renderPersonas();
+    renderMetricToggle();
+    renderNotice();
+    renderRows();
+    renderResults();
     renderContextLine();
   }
 
@@ -315,11 +458,12 @@
     b.addEventListener('click', () => { state.metric = b.dataset.metric; render(); saveToUrl(); });
   });
   $('addrow').addEventListener('click', () => {
-    state.rows.push({ id: uidSeq++, model: MODELS[0].id, size: 'chat', count: 3 });
+    state.rows.push(newRow(MODELS[0].id, 'chat', 3));
     state.persona = null;
     render(); saveToUrl();
   });
   $('reset').addEventListener('click', () => { applyPersona('casual'); saveToUrl(); });
+  $('notice-close').addEventListener('click', () => { notice = ''; renderNotice(); });
   $('share').addEventListener('click', async () => {
     saveToUrl();
     try {
