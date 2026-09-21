@@ -37,7 +37,7 @@
   const inputValue = (scenario, inputId) => D.INPUTS[inputId][levelFor(scenario, inputId)];
 
   // Energy (Wh) to the selected metric, for rows that price energy directly
-  // (agent rows now; media, streaming, and calls later). Water uses the
+  // (agent and media rows; streaming and calls later). Water uses the
   // data-centre water factor.
   function fromEnergy(wh, metric, grid, scenario) {
     if (metric === 'energy') return wh;
@@ -98,12 +98,29 @@
   }
 
   // --------------------------------------------------------------------------
+  // Generated media (spec feature 1). A media row is { type, tier, amount }.
+  //   Video Wh = seconds × tier Wh per video-second × PUE
+  //   Image Wh = images × tier Wh per image × CPU+RAM factor × PUE
+  // --------------------------------------------------------------------------
+  const isMediaRow = (row) => row.type === 'video' || row.type === 'image';
+  const getMediaTier = (type, tier) => (D.MEDIA_TIERS[type] || []).find((t) => t.id === tier);
+  function mediaWh(row, scenario) {
+    const tier = getMediaTier(row.type, row.tier);
+    if (!tier || !row.amount) return 0;
+    const perUnit = inputValue(scenario, tier.input);
+    const cpuRam = row.type === 'image' ? inputValue(scenario, 'cpuRam') : 1;
+    return row.amount * perUnit * cpuRam * inputValue(scenario, 'pue');
+  }
+
+  // --------------------------------------------------------------------------
   // Rows and totals
   // --------------------------------------------------------------------------
   // One row's value per day under a scenario (central if omitted).
-  // rows: [{ model, size, count, ...agent fields }]
+  // AI rows are text/agent rows { model, size, count, ...agent fields } or
+  // media rows { type, tier, amount }.
   function rowValue(row, metric, grid, scenario) {
     const sc = scenario || SCENARIOS.central;
+    if (isMediaRow(row)) return fromEnergy(mediaWh(row, sc), metric, grid, sc);
     if (!row.count) return 0;
     if (isAgentSize(row.size)) return row.count * fromEnergy(agentSessionWh(row, sc), metric, grid, sc);
     if (!isTextSize(row.size)) return 0; // e.g. the removed 'agent' size
@@ -135,11 +152,19 @@
     return rangeOf((sc) => aiDaily(rows, metric, grid, sc));
   }
 
+  // Donut label for any AI row.
+  function rowLabel(r) {
+    if (isMediaRow(r)) {
+      const tier = getMediaTier(r.type, r.tier);
+      return `${r.type === 'video' ? 'Video' : 'Images'}, ${tier ? tier.label.toLowerCase() : ''}`;
+    }
+    return isAgentSize(r.size) ? getAgentSize(r.size).label : getModel(r.model).name;
+  }
   // Per-row central values for the donut, largest first.
   function rowShares(rows, metric, grid) {
     return rows
       .map((r) => ({
-        label: isAgentSize(r.size) ? getAgentSize(r.size).label : getModel(r.model).name,
+        label: rowLabel(r),
         value: rowValue(r, metric, grid),
         size: r.size,
       }))
@@ -164,8 +189,8 @@
 
   return {
     SCENARIOS, LEVELS, ECOLOGITS, levelFor,
-    getModel, getLocation, isTextSize, isAgentSize, getAgentSize,
-    perPrompt, agentTokens, agentSessionWh,
+    getModel, getLocation, isTextSize, isAgentSize, getAgentSize, isMediaRow, getMediaTier,
+    perPrompt, agentTokens, agentSessionWh, mediaWh,
     rowValue, rowRange, projectRange, aiDaily, aiRange,
     rowShares, dailyFootprint, itemDaily, itemAnnual,
   };

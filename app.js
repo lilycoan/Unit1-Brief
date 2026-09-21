@@ -6,6 +6,7 @@
     MODELS, SIZES, LOCATIONS, HOMES, DRIVING, DIETS, FLYING,
     DAILY_ITEMS, ANNUAL_ITEMS, DAYS,
     INPUTS, AGENT_SIZES, CACHE_SETTINGS, AGENT_CROSS_CHECKS,
+    MEDIA_TYPES, MEDIA_TIERS,
   } = window.FootprintData;
   const Calc = window.FootprintCalc;
 
@@ -31,7 +32,7 @@
   // State
   // ==========================================================================
   let uidSeq = 1;
-  const state = { rows: [], metric: 'carbon', persona: 'casual', loc: 'us', home: 'med', drive: 'davg', diet: 'avg', fly: 'some' };
+  const state = { rows: [], media: [], metric: 'carbon', persona: 'casual', loc: 'us', home: 'med', drive: 'davg', diet: 'avg', fly: 'some' };
   // One-line message shown above the rows (e.g. an old share link was changed).
   let notice = '';
 
@@ -50,6 +51,15 @@
   //   custom agent model:agent-custom:count:project:fresh:cache:output:cacheSetting
   // Rows with the removed fixed 'agent' size are dropped with a notice
   // (plan.md, "Old share links", user's choice A).
+  // Generated-media rows: { type: 'video'|'image', tier, amount per day }.
+  // Defaults when added or when the type changes: 10 s of mid-size video, or
+  // 5 standard images.
+  const MEDIA_DEFAULTS = { video: { tier: 'mid', amount: 10 }, image: { tier: 'standard', amount: 5 } };
+  function newMediaRow(type, tier, amount) {
+    const d = MEDIA_DEFAULTS[type] || MEDIA_DEFAULTS.image;
+    return { id: uidSeq++, type: MEDIA_DEFAULTS[type] ? type : 'image', tier: tier || d.tier, amount: amount == null ? d.amount : amount };
+  }
+
   function rowFromLink(chunk) {
     const [model, size, count, project, fresh, cache, output, setting] = chunk.split(':');
     const num = (v, dflt) => (v === undefined || v === '' || !isFinite(Number(v)) ? dflt : Math.max(0, Number(v)));
@@ -84,15 +94,25 @@
         }
         state.persona = null;
       }
+      // Media rows: m=type:tier:amount,...
+      const m = p.get('m');
+      if (m) {
+        state.media = m.split(',').filter(Boolean).map((chunk) => {
+          const [type, tier, amount] = chunk.split(':');
+          return newMediaRow(type, tier, Math.max(0, Number(amount) || 0));
+        }).filter((row) => Calc.getMediaTier(row.type, row.tier));
+        state.persona = null;
+      }
       ['metric', 'loc', 'home', 'drive', 'diet', 'fly'].forEach((k) => {
         if (p.get(k)) state[k] = p.get(k);
       });
     } catch (e) { /* ignore malformed url state */ }
-    if (!state.rows.length) applyPersona(state.persona || 'casual', { silent: true });
+    if (!state.rows.length && !state.media.length) applyPersona(state.persona || 'casual', { silent: true });
   }
   function saveToUrl() {
     const p = new URLSearchParams();
     p.set('r', state.rows.map(rowToLink).join(','));
+    if (state.media.length) p.set('m', state.media.map((r) => `${r.type}:${r.tier}:${r.amount}`).join(','));
     p.set('metric', state.metric);
     p.set('loc', state.loc); p.set('home', state.home); p.set('drive', state.drive);
     p.set('diet', state.diet); p.set('fly', state.fly);
@@ -104,6 +124,7 @@
     if (!persona) return;
     state.persona = id;
     state.rows = persona.rows.map(([model, size, count]) => newRow(model, size, count));
+    state.media = (persona.media || []).map(([type, tier, amount]) => newMediaRow(type, tier, amount));
     if (!(opts && opts.silent)) render();
   }
 
@@ -111,11 +132,13 @@
   // Math — thin wrappers that pass the current page state into calc.js
   // ==========================================================================
   const getLoc = () => Calc.getLocation(state.loc);
-  const aiDaily = (metric) => Calc.aiDaily(state.rows, metric, getLoc().grid);
-  const aiRange = (metric) => Calc.aiRange(state.rows, metric, getLoc().grid);
+  // Every AI row: text and agent rows, then generated-media rows.
+  const aiRows = () => state.rows.concat(state.media);
+  const aiDaily = (metric) => Calc.aiDaily(aiRows(), metric, getLoc().grid);
+  const aiRange = (metric) => Calc.aiRange(aiRows(), metric, getLoc().grid);
   const rowRange = (row, metric) => Calc.rowRange(row, metric, getLoc().grid);
   const projectRange = (row, metric) => Calc.projectRange(row, metric, getLoc().grid);
-  const rowShares = (metric) => Calc.rowShares(state.rows, metric, getLoc().grid);
+  const rowShares = (metric) => Calc.rowShares(aiRows(), metric, getLoc().grid);
   const dailyFootprint = (metric) => Calc.dailyFootprint(state, metric);
   const itemDaily = Calc.itemDaily;
   const itemAnnual = Calc.itemAnnual;
@@ -187,6 +210,20 @@
   const pct = (x) => `${Math.round(x * 100)}%`;
   const srcText = (sources) => `source${sources.length > 1 ? 's' : ''} ${sources.join(', ')}`;
 
+  // Energy / carbon / water result slots, filled by fillMetrics().
+  const METRICS_HTML = `
+      <div class="metric-results">
+        <span class="range-period">Energy</span><span data-out="energy"></span>
+        <span class="range-period">Carbon</span><span data-out="carbon"></span>
+        <span class="range-period">Water</span><span data-out="water"></span>
+      </div>`;
+  function fillMetrics(node, row, perDayNote) {
+    for (const metric of ['energy', 'carbon', 'water']) {
+      node.querySelector(`[data-out="${metric}"]`).innerHTML = fmtRange(rowRange(row, metric), metric) +
+        (metric === 'energy' ? ` <span class="range-key">low · central · high, per day (${perDayNote})</span>` : '');
+    }
+  }
+
   // The agent-session box under an agent row: inputs (project sessions; token
   // counts and cache-read setting in custom mode) plus result slots that
   // fillRowOutputs() updates in place.
@@ -209,11 +246,7 @@
     return `
       <p class="agent-head">${tier.label} · <strong>not model-specific</strong>${tier.detail ? ' · ' + tier.detail : ''} · ${srcText(tier.sources)}</p>
       ${tokenInputs}
-      <div class="agent-results">
-        <span class="range-period">Energy</span><span data-out="energy"></span>
-        <span class="range-period">Carbon</span><span data-out="carbon"></span>
-        <span class="range-period">Water</span><span data-out="water"></span>
-      </div>
+      ${METRICS_HTML}
       <p class="agent-project">Project: <input type="number" min="0" step="1" data-field="project" value="${row.project}"> sessions →
         <span data-out="project"></span> <span class="range-key">not added to daily or yearly totals</span></p>
       <p class="agent-xcheck">Per session: this estimate <span data-out="session"></span> · ${xchecks}</p>
@@ -231,10 +264,7 @@
       return;
     }
     const out = (name) => node.querySelector(`[data-out="${name}"]`);
-    for (const metric of ['energy', 'carbon', 'water']) {
-      out(metric).innerHTML = fmtRange(rowRange(row, metric), metric) +
-        (metric === 'energy' ? ` <span class="range-key">low · central · high, per day (${sig(row.count)} session${row.count === 1 ? '' : 's'})</span>` : '');
-    }
+    fillMetrics(node, row, `${sig(row.count)} session${row.count === 1 ? '' : 's'}`);
     const proj = projectRange(row, 'energy');
     out('project').textContent = `${fmtRange(proj, 'energy')} (${fmtRange(projectRange(row, state.metric))})`;
     out('session').textContent = `${fmtMetric(Calc.agentSessionWh(row, Calc.SCENARIOS.central), 'energy')} central`;
@@ -288,6 +318,60 @@
     });
   }
 
+  // Generated-media rows (spec feature 1).
+  function mediaDetailHtml(row) {
+    const tier = Calc.getMediaTier(row.type, row.tier);
+    const input = INPUTS[tier.input];
+    const warning = row.type === 'video'
+      ? '<p class="media-warning">⚠ Energy grows faster than clip length, but this estimate is linear: clips much longer than about 5 s are likely undercounted.</p>'
+      : '';
+    const perUnit = row.type === 'video' ? 'Wh per video-second' : 'GPU Wh per image';
+    return `${warning}${METRICS_HTML}
+      <p class="media-measured">${tier.label}: ${sig(input.low)} · ${sig(input.central)} · ${sig(input.high)} ${perUnit}. Measured: ${tier.measured} · ${srcText(input.sources)}</p>`;
+  }
+  function fillMediaOutputs(node, row) {
+    const unit = row.type === 'video' ? 's of video' : `image${row.amount === 1 ? '' : 's'}`;
+    fillMetrics(node, row, `${sig(row.amount)} ${unit}`);
+  }
+  function renderMediaRows() {
+    const host = $('media-rows');
+    host.innerHTML = '';
+    $('media-head').hidden = !state.media.length;
+    const tpl = $('media-tpl');
+    state.media.forEach((row) => {
+      const node = tpl.content.firstElementChild.cloneNode(true);
+      node.dataset.rowId = row.id;
+      const typeSel = node.querySelector('.media-type');
+      const tierSel = node.querySelector('.media-tier');
+      const amount = node.querySelector('.media-amount');
+      const tier = Calc.getMediaTier(row.type, row.tier);
+      typeSel.innerHTML = MEDIA_TYPES.map((t) => `<option value="${t.id}">${t.label}</option>`).join('');
+      typeSel.value = row.type;
+      tierSel.innerHTML = MEDIA_TIERS[row.type].map((t) => `<option value="${t.id}">${t.label}</option>`).join('');
+      tierSel.value = row.tier;
+      tierSel.title = `Measured: ${tier.measured}`; // tooltip naming the measured model and resolution
+      amount.value = row.amount;
+      const amountLabel = MEDIA_TYPES.find((t) => t.id === row.type).amountLabel;
+      amount.setAttribute('aria-label', amountLabel);
+      amount.title = amountLabel;
+      node.querySelector('.media-detail').innerHTML = mediaDetailHtml(row);
+      fillMediaOutputs(node, row);
+
+      typeSel.addEventListener('change', () => {
+        Object.assign(row, newMediaRow(typeSel.value), { id: row.id });
+        state.persona = null; render(); saveToUrl();
+      });
+      tierSel.addEventListener('change', () => { row.tier = tierSel.value; state.persona = null; render(); saveToUrl(); });
+      amount.addEventListener('input', () => { row.amount = Math.max(0, Number(amount.value) || 0); onValues(); });
+      node.querySelector('.row-remove').addEventListener('click', () => {
+        state.media = state.media.filter((r) => r.id !== row.id);
+        state.persona = null;
+        render(); saveToUrl();
+      });
+      host.appendChild(node);
+    });
+  }
+
   // A typed value changed: refresh every number on the page without
   // rebuilding the inputs, so the box being typed in keeps focus.
   function onValues() {
@@ -296,6 +380,10 @@
     state.rows.forEach((row) => {
       const node = $('rows').querySelector(`[data-row-id="${row.id}"]`);
       if (node) fillRowOutputs(node, row);
+    });
+    state.media.forEach((row) => {
+      const node = $('media-rows').querySelector(`[data-row-id="${row.id}"]`);
+      if (node) fillMediaOutputs(node, row);
     });
     renderResults();
     saveToUrl();
@@ -447,6 +535,7 @@
     renderMetricToggle();
     renderNotice();
     renderRows();
+    renderMediaRows();
     renderResults();
     renderContextLine();
   }
@@ -459,6 +548,11 @@
   });
   $('addrow').addEventListener('click', () => {
     state.rows.push(newRow(MODELS[0].id, 'chat', 3));
+    state.persona = null;
+    render(); saveToUrl();
+  });
+  $('addmedia').addEventListener('click', () => {
+    state.media.push(newMediaRow('image'));
     state.persona = null;
     render(); saveToUrl();
   });

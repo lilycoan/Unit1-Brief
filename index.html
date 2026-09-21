@@ -65,6 +65,16 @@
       <p class="notice" id="notice" hidden><span id="notice-text"></span> <button type="button" class="link" id="notice-close">Dismiss</button></p>
       <div class="rows" id="rows"></div>
       <button type="button" class="addrow" id="addrow">+ add another</button>
+
+      <div class="media-group">
+        <h3 class="group-title">Generated media</h3>
+        <p class="group-note">Figures come from open models measured on single research GPUs; no commercial video or image tool has been measured. Embodied hardware carbon is not included.</p>
+        <div class="rows-head" id="media-head" aria-hidden="true">
+          <span>Type</span><span>Tier</span><span>Per day</span><span></span>
+        </div>
+        <div class="rows" id="media-rows"></div>
+        <button type="button" class="addrow" id="addmedia">+ add video or images</button>
+      </div>
       <div class="tools-row">
         <button type="button" class="link" id="reset">Reset</button>
         <span class="sep">·</span>
@@ -143,6 +153,16 @@
     <button type="button" class="row-remove" aria-label="Remove row">×</button>
     <div class="row-range"></div>
     <div class="agent-detail" hidden></div>
+  </div>
+</template>
+
+<template id="media-tpl">
+  <div class="row media-row">
+    <select class="media-type" aria-label="Media type"></select>
+    <select class="media-tier" aria-label="Tier"></select>
+    <input type="number" class="media-amount" min="0" step="1" inputmode="numeric">
+    <button type="button" class="row-remove" aria-label="Remove row">×</button>
+    <div class="media-detail"></div>
   </div>
 </template>
 

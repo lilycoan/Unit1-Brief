@@ -134,6 +134,87 @@
       sources: [4],
       why: "derived from the calculator's text-model data, which rests on unverified WRI inputs",
     },
+
+    // Generated media (spec feature 1). Video values are Wh per second of
+    // video; image values are GPU Wh per image. Values are the spec's approved
+    // (rounded) figures, e.g. CogVideoX-5B 25.3 Wh ÷ 6.1 s ≈ 4.1.
+    videoSmall: {
+      label: 'Video energy, small fast model',
+      unit: 'Wh per video-second',
+      low: 0.09, central: 0.73, high: 1.6,
+      sources: [1],
+      why: 'measured on open models on one research GPU; no commercial tool measured',
+    },
+    videoMid: {
+      label: 'Video energy, mid-size model',
+      unit: 'Wh per video-second',
+      low: 1.6, central: 4.1, high: 19,
+      sources: [1],
+      why: 'measured on open models on one research GPU; no commercial tool measured',
+    },
+    videoLarge: {
+      label: 'Video energy, large model',
+      unit: 'Wh per video-second',
+      low: 19, central: 77, high: 1313 / 12, // high: Sora 2 Pro, 1,313 Wh per 12 s clip (inferred)
+      sources: [1, 2],
+      why: 'the high end is inferred for a commercial tool, not measured',
+    },
+    imageDraft: {
+      label: 'Image energy, draft (512², 20 steps)',
+      unit: 'GPU Wh per image',
+      low: 0.247, central: 0.433, high: 0.569,
+      sources: [24],
+      why: 'open models on a research GPU; the tier settings are our choice, not the source’s',
+    },
+    imageStandard: {
+      label: 'Image energy, standard (1024², 30 steps)',
+      unit: 'GPU Wh per image',
+      low: 1.267, central: 2.228, high: 2.553,
+      sources: [24],
+      why: 'open models on a research GPU; the tier settings are our choice, not the source’s',
+    },
+    imageHigh: {
+      label: 'Image energy, high quality (1024², 50 steps)',
+      unit: 'GPU Wh per image',
+      low: 2.092, central: 3.583, high: 4.278,
+      sources: [24],
+      why: 'open models on a research GPU; the tier settings are our choice, not the source’s',
+    },
+    cpuRam: {
+      label: 'CPU and RAM energy on top of GPU (images)',
+      unit: '× GPU energy',
+      low: 1.15, central: 1.16, high: 1.21,
+      sources: [1],
+      why: 'a proxy taken from video models; RAM energy in that source is estimated, not measured',
+    },
+  };
+
+  // ==========================================================================
+  // Generated media (spec feature 1). Each tier points at its INPUTS entry.
+  // `measured` feeds the tooltip: the model behind the central value and its
+  // resolution, plus the models behind the low and high ends.
+  // ==========================================================================
+  const MEDIA_TYPES = [
+    { id: 'video', label: 'Video', amountLabel: 'seconds per day' },
+    { id: 'image', label: 'Image', amountLabel: 'images per day' },
+  ];
+  const MEDIA_TIERS = {
+    video: [
+      { id: 'small', label: 'Small fast model', input: 'videoSmall',
+        measured: 'LTX-Video, 512×704, 24 fps (central) · low AnimateDiff 512×512 · high CogVideoX-2B 480×720' },
+      { id: 'mid', label: 'Mid-size model', input: 'videoMid',
+        measured: 'CogVideoX-5B, 480×720, 8 fps (central) · low CogVideoX-2B 480×720 · high Mochi-1 480×848' },
+      { id: 'large', label: 'Large model', input: 'videoLarge',
+        measured: 'WAN2.1-14B, 720×1280, 15 fps (central) · low Mochi-1 480×848 · high Sora 2 Pro 1080p (inferred, not measured)' },
+    ],
+    image: [
+      { id: 'draft', label: 'Draft', input: 'imageDraft',
+        measured: 'Qwen, 512×512, 20 steps (central) · low SD3.5 · high Flux · A100 GPU' },
+      { id: 'standard', label: 'Standard', input: 'imageStandard',
+        measured: 'Qwen, 1024×1024, 30 steps (central) · low SD3.5 · high Flux · A100 GPU' },
+      { id: 'high', label: 'High quality', input: 'imageHigh',
+        measured: 'Qwen, 1024×1024, 50 steps (central) · low SD3.5 · high Flux · A100 GPU' },
+    ],
   };
 
   // ==========================================================================
@@ -165,6 +246,7 @@
     MODELS, SIZES, WORLD_GRID, LOCATIONS, HOMES, DRIVING, DIETS, FLYING,
     DAILY_ITEMS, ANNUAL_ITEMS, GAL_TO_L, DAYS,
     INPUTS, AGENT_TOKEN_MIX, AGENT_SIZES, CACHE_SETTINGS, AGENT_CROSS_CHECKS,
+    MEDIA_TYPES, MEDIA_TIERS,
   };
   if (typeof module === 'object' && module.exports) module.exports = FootprintData;
   else root.FootprintData = FootprintData;

@@ -72,6 +72,8 @@ Ranges come first, so each feature is built range-aware and needs no rework. Age
 - **Range layout (step 1), settled 2026-09-21 (user chose option 1).** Each row shows its per-day range on a small line under its inputs; the "Your AI use" daily and yearly range sits under the verdict sentence. All three numbers in a range share one unit.
 - **Embodied carbon has no range in 48 of 72 EcoLogits entries (found in step 1).** For those, `embmin` = `emb` = `embmax`, so only the energy part of a text row's carbon varies. To be stated in the method panel (step 8).
 - **Agent row layout (step 2), settled 2026-09-21 (user chose option 1).** Agent sessions are chosen from the reply-length dropdown (light, heavy, or "enter tokens"). The model dropdown greys out as "not model-specific", and a box under the row shows energy, carbon, and water ranges, the project readout (default 20 sessions), the cross-checks, and, in custom mode, the token inputs, cache-read setting, and formula. Input and output per-token factors move together as one input, "Per-token energy (provider type)", which reproduces the spec's 602 Wh driver.
+- **Media values (step 3).** The media tiers use the spec's approved (rounded) values, e.g. 4.1 Wh per video-second for CogVideoX-5B, so the page matches the spec's 45.1 Wh. The unrounded Table 4 value (25.3 Wh ÷ 6.125 s ≈ 4.13) would give 45.4 Wh. The tier tooltip also appears as a visible "Measured:" line in each row, since tooltips don't show on touch screens. Media rows are saved in the share link as `m=type:tier:amount`.
+- **Feature 1 limitations still to place (step 8).** Shown on the page now: open models on research GPUs, no commercial tool, embodied carbon excluded, the length warning, and the large tier's inferred high end. Still to go in the method panel: tiers differ in model, resolution, and frame rate at once (none reaches 1080p or 4K); Sora 2 Pro may or may not include overhead; the tier settings are the project's choice; the CPU+RAM proxy and estimated RAM; derived water.
 - **Sources pending user review.** Research entries 1, 13, 24, and 26, added during specification, are still marked pending. This doesn't block the build, but it is part of verification.
 
 ## Checklist
@@ -108,10 +110,10 @@ Replace or expand the implementation placeholders below with tasks specific to t
 - [ ] Checkpoint: acceptance checks 2.1–2.6 pass
 
 **Step 3: Generated media (feature 1)**
-- [ ] Declare the video and image tiers, the CPU+RAM factor, PUE, and water factors in `data.js`
-- [ ] Add a "Generated media" group with add and remove rows (type, tier, amount per day), each showing a range
-- [ ] Add the tier tooltips naming the measured model and resolution, the video length warning, and the per-row sources
-- [ ] Media rows feed the AI totals and the donut
+- [x] Declare the video and image tiers, the CPU+RAM factor, PUE, and water factors in `data.js`
+- [x] Add a "Generated media" group with add and remove rows (type, tier, amount per day), each showing a range
+- [x] Add the tier tooltips naming the measured model and resolution, the video length warning, and the per-row sources
+- [x] Media rows feed the AI totals and the donut
 - [ ] Checkpoint: acceptance checks 1.1–1.5 pass
 
 **Step 4: "Your other digital use" total and streaming (feature 3)**

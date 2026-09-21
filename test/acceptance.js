@@ -220,5 +220,66 @@ for (const [input, swing] of [['cacheRead', 811], ['providerFactor', 602], ['pue
 approx('old "agent" size row contributes 0', Calc.aiDaily(rows('claude-sonnet-4-6:agent:3'), 'carbon', US), 0, 0);
 
 // --------------------------------------------------------------------------
+section('Feature 1: generated media (spec 1.1–1.5)');
+// --------------------------------------------------------------------------
+
+// Hand calculations at central values (PUE 1.10, CPU+RAM 1.16, water 3.85 L/kWh):
+//   10 s mid-size video = 10 × 4.1 × 1.10         = 45.10 Wh
+//   10 standard images  = 10 × 2.228 × 1.16 × 1.10 = 28.43 Wh
+const video10 = { type: 'video', tier: 'mid', amount: 10 };
+const images10 = { type: 'image', tier: 'standard', amount: 10 };
+
+// 1.1: 45.1 Wh; ~17.1 g CO2e on the US grid; ~0.174 L of water.
+approx('1.1 10 s mid-size video, central energy (Wh)', Calc.rowValue(video10, 'energy', US), 45.1, 0.05);
+approx('1.1 10 s mid-size video, central carbon, US (g)', Calc.rowValue(video10, 'carbon', US), 17.1, 0.05);
+approx('1.1 10 s mid-size video, central water (L)', Calc.rowValue(video10, 'water', US), 0.174, 0.0005);
+
+// 1.2: 10 standard images, 28.4 Wh.
+approx('1.2 10 standard images, central energy (Wh)', Calc.rowValue(images10, 'energy', US), 28.4, 0.05);
+
+// Spec's per-unit central values for every tier.
+for (const [type, tier, expected, tol] of [
+  ['video', 'small', 0.80, 0.005], ['video', 'mid', 4.51, 0.005], ['video', 'large', 84.7, 0.05],
+  ['image', 'draft', 0.55, 0.005], ['image', 'standard', 2.84, 0.005], ['image', 'high', 4.57, 0.005],
+]) {
+  approx(`central per ${type === 'video' ? 'video-second' : 'image'}: ${type} ${tier} (Wh)`,
+    Calc.rowValue({ type, tier, amount: 1 }, 'energy', US), expected, tol);
+}
+
+// 1.3: the daily AI total rises by exactly the media rows' central values,
+// and the yearly total is daily × 365.
+{
+  const text = rows('gpt-5.5:chat:5');
+  const withMedia = text.concat([video10, images10]);
+  for (const metric of ['carbon', 'water']) {
+    const rise = Calc.aiDaily(withMedia, metric, US) - Calc.aiDaily(text, metric, US);
+    approx(`1.3 AI total rises by the media rows' central values (${metric})`,
+      rise, Calc.rowValue(video10, metric, US) + Calc.rowValue(images10, metric, US), 1e-9);
+  }
+  approx('1.3 yearly total = daily × 365 (with media, carbon)',
+    Calc.aiDaily(withMedia, 'carbon', US) * D.DAYS, Calc.aiDaily(withMedia, 'carbon', US) * 365, 1e-9);
+  // Donut includes media rows.
+  const labels = Calc.rowShares(withMedia, 'carbon', US).map((s) => s.label);
+  check('1.3 donut includes the media rows', labels.includes('Video, mid-size model') && labels.includes('Images, standard'), labels.join(' | '));
+
+  // 1.5: removing all media rows returns the totals to the text-only values.
+  approx('1.5 media rows removed → text-only total (carbon)',
+    Calc.aiDaily(withMedia.filter((r) => !Calc.isMediaRow(r)), 'carbon', US), Calc.aiDaily(text, 'carbon', US), 0);
+}
+
+// 1.4 (calculation part): every tier's low ≤ central ≤ high, for each metric.
+for (const type of ['video', 'image']) for (const t of D.MEDIA_TIERS[type]) {
+  for (const metric of ['energy', 'carbon', 'water']) {
+    const r = Calc.rowRange({ type, tier: t.id, amount: 1 }, metric, US);
+    check(`1.4 ${type} ${t.id} ${metric}: low ≤ central ≤ high`, r.low <= r.central && r.central <= r.high,
+      `${round(r.low)} · ${round(r.central)} · ${round(r.high)}`);
+  }
+}
+// Hand-check one all-high end: large video, 1 s = (1,313 ÷ 12) × 1.56 = 170.69 Wh.
+approx('large video high end, 1 s (Wh)', Calc.rowRange({ type: 'video', tier: 'large', amount: 1 }, 'energy', US).high, 1313 / 12 * 1.56, 1e-9);
+// Hand-check one all-low end: draft image = 0.247 × 1.15 × 1.09 = 0.30962 Wh.
+approx('draft image low end (Wh)', Calc.rowRange({ type: 'image', tier: 'draft', amount: 1 }, 'energy', US).low, 0.247 * 1.15 * 1.09, 1e-12);
+
+// --------------------------------------------------------------------------
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exitCode = failed ? 1 : 0;
