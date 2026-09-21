@@ -105,6 +105,7 @@ For each source, record:
 - Checked directly: abstract page (NeurIPS 2025 NextVid Workshop oral); Tables 2 and 4 and the limitations text, first via the HTML version and then **re-checked against the PDF text (`pdftotext`): all values match**. The user should still confirm them.
 - Limitations: a single H100 SXM; open models only; no audio generation; excludes optimizations such as caching and quantization; the analytical model assumes uniform attention cost; the paper's scaling is quadratic in length, so per-second is only valid near the ~5 s defaults; no water figure.
 - Confidence/decision: **use with qualifications** (workshop-level review; measured, not inferred).
+- **Added during specification (2026-09-21), pending user review:** Table 4 (PDF, via `pdftotext`) reports GPU, CPU, and RAM energy separately. Total ÷ GPU (our arithmetic) = 1.148–1.209 across the seven models (1.15–1.17 for all but AnimateDiff). Setup: one H100 SXM with an 8-core AMD EPYC CPU; GPU and CPU measured with CodeCarbon (NVML, pyRAPL); **RAM estimated with CodeCarbon's default heuristic, not measured**. The paper states GPU is 80–90% of total. Proposed use: a proxy for the CPU and RAM energy missing from GPU-only image figures (source 24). This ratio is for video pipelines, not image models.
 
 **2. Jegham & Luccioni, "Lights, Camera, Carbon: Unveiling the Energy Footprint of AI Video Generation" (July 22, 2026). https://sustainableaigroup.com/lightscameracarbon**
 - Claim/figures: open models 57.5–114.8 Wh per 5 s clip; Sora 2 Pro 1,313 Wh per 12 s 1080p clip.
@@ -175,6 +176,7 @@ For each source, record:
 - Key assumption: cache reads cost ~10% of fresh-input energy, with 1% and 25% as bounds, taken from *pricing ratios*. With 96% of tokens being cache reads, this one assumption drives the result. Assumes a US-average grid (341 g CO₂e/kWh, eGRID 2024). His three methods gave 70–330 kWh for the 8 weeks.
 - Limitations: one person's usage; energy inferred from prices, not measured; blog, not peer-reviewed. He is a climate scientist, not an AI hardware measurer.
 - Confidence/decision: **use with qualifications**, as the high end of a range.
+- **Added during specification (2026-09-21), pending user review (page via fetch):** median session "around 0.6 kWh (0.25 to 1.2 kWh)"; token mix over 8 weeks is 96% cache reads and "0.4% of total tokens" output, the remainder (~3.6%) cache writes. Couch (source 12) gives **no token-type split** for his 592,439-token median session. The specification applies Hausfather's mix to both agent-session tiers; for Couch's session size this is an assumption.
 
 **Why the two disagree (our reading of 12 and 13):** Couch's "session" is ~592k tokens and 24 calls; Hausfather's is ~10M tokens and 100+ calls, about 17× the tokens, and their median energies differ ~15× (41 vs 600 Wh). So most of the gap is *how big a session is*, not disagreement about energy per token. The remaining uncertainty is the cache-read energy assumption (1–25% of fresh input). Neither author has lab data.
 
@@ -271,6 +273,14 @@ For each source, record:
 - Limitations: a short paper, revisions pending; one author; mobile network only; data and network emissions only.
 - Confidence/decision: **use with qualifications**, for the direction and rough size (about half) of the network-data effect only.
 
+**26. Chang, Varvello, Hao & Mukherjee (Nokia Bell Labs), "Can You See Me Now? A Measurement Study of Zoom, Webex, and Meet," arXiv:2109.13113 (Sept 27, 2021; ACM IMC 2021). https://arxiv.org/abs/2109.13113** *(Added during specification, 2026-09-21; pending user review.)*
+- Claim/figures: on a low-end Samsung Galaxy J3 measured with a Monsoon power meter, a one-hour call with the camera on drains "up to 40%" of its 2,600 mAh battery; audio only with the screen off drains "about 20–30%." Data use from 175 MB per hour (Zoom gallery view) to about 1 GB per hour (Meet). Our conversion, assuming a 3.85 V nominal battery voltage (not stated in the paper): about **4.0 W camera on** and **2.0–3.0 W audio only, screen off**.
+- Checked directly: the PDF text via `pdftotext` (abstract findings, device setup, battery-usage passage).
+- Limitations: one low-end phone; 2021 app versions (April–May 2021); "up to" wording, so 4.0 W is nearer a high value than a typical one; the voltage is our assumption; the phones only received streams from emulated senders.
+- Confidence/decision: **use with qualifications**, for phone device power during calls.
+
+**Checked during specification and not usable for laptop call power:** Herglotz et al., "Extended Signaling Methods for Reduced Video Decoder Power Consumption Using Green Metadata," arXiv:2310.17346 (2023), measured a laptop in a WebRTC call but reports only relative savings (up to about 20% from frame-rate reduction), no absolute watts. WattSeal's video-call benchmark (~31 W on a gaming laptop) is a vendor blog and is **rejected**. No absolute laptop call measurement was found.
+
 **What the video-call sources show (our comparison):**
 - **Per hour of a call, total (device + network + server):** Greenspector mobile 19–66 g; Mytton network only 12 g; Obringer 150–1,000 g. The measured and modeled estimates differ by up to ~50×. Sources 16 and 7 are also mutually inconsistent for streaming.
 - **Camera-off effect:** ~50% of data (Mortas), ~72% of carbon (Greenspector, phone), 96% (Obringer, basis unstated). The 96% figure is the least supported.
@@ -293,6 +303,15 @@ For each source, record:
 - Checked directly: the PDF text (abstract, results, limitations). Accepted to FAccT 2026.
 - Limitations (paper's own): **GPU dynamic energy only** (excludes CPU, RAM, cooling, networking); four models and three GPU types; not a production serving stack; CodeCarbon assumptions; complete sweeps only on A100. The 0.051 Wh minimum is a 256² preview setting no editor would likely use.
 - Confidence/decision: **use with qualifications**, for the scaling behavior and a realistic range at typical settings.
+- **Added during specification (2026-09-21), pending user review:** Appendix Tables 6–9 (PDF, via `pdftotext`) give A100 GPU energy in joules **per 100 prompts** (confirmed: Qwen 256², 10 steps = 1.83 × 10⁴ J → 0.051 Wh per image, matching the paper's text). Values used for the image tiers (fp16 with guidance; Wh per image = J ÷ 100 ÷ 3,600):
+
+  | Setting | SD2 | SD3.5 | Qwen | Flux |
+  |---|---|---|---|---|
+  | 512², 20 steps | 0.040 | 0.247 | 0.433 | 0.569 |
+  | 1024², 30 steps | 0.222 | 1.267 | 2.228 | 2.553 |
+  | 1024², 50 steps | 0.364 | 2.092 | 3.583 | 4.278 |
+
+  The mapping of these settings to "draft / standard / high quality" is the user's choice, not the paper's. SD2 was excluded from the tiers by the user as less representative of current large models.
 
 **25. MIT Technology Review, "We did the math on AI's energy footprint" (May 20, 2025), image section. https://www.technologyreview.com/2025/05/20/1116327/ai-energy-usage-climate-footprint-big-tech/**
 - Claim/figures: Stable Diffusion 3 Medium (2 billion parameters), 1024 × 1024, standard quality: about **1,141 J (≈ 0.32 Wh)** of GPU energy, measured by Jae-Won Chung of the University of Michigan's ML.Energy group; "doubling the number [of] diffusion steps to 50 just about doubles the energy required, to about 4,402 joules (≈ 1.2 Wh)."
