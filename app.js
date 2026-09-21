@@ -7,7 +7,7 @@
     DAILY_ITEMS, ANNUAL_ITEMS, DAYS,
     INPUTS, AGENT_SIZES, CACHE_SETTINGS, AGENT_CROSS_CHECKS,
     MEDIA_TYPES, MEDIA_TIERS, STREAMING_DEVICES, STREAMING_CROSS_CHECKS,
-    CALL_DEVICES, CALL_DATA, CALL_CROSS_CHECKS, GLOSSARY,
+    CALL_DEVICES, CALL_DATA, CALL_CROSS_CHECKS, GLOSSARY, SOURCES,
   } = window.FootprintData;
   const Calc = window.FootprintCalc;
 
@@ -65,12 +65,6 @@
       extra || {});
   }
 
-  // Share-link row format (fields separated by ':'):
-  //   text rows    model:size:count
-  //   agent tiers  model:size:count:project
-  //   custom agent model:agent-custom:count:project:fresh:cache:output:cacheSetting
-  // Rows with the removed fixed 'agent' size are dropped with a notice
-  // (plan.md, "Old share links", user's choice A).
   // Generated-media rows: { type: 'video'|'image', tier, amount per day }.
   // Defaults when added or when the type changes: 10 s of mid-size video, or
   // 5 standard images.
@@ -80,6 +74,12 @@
     return { id: uidSeq++, type: MEDIA_DEFAULTS[type] ? type : 'image', tier: tier || d.tier, amount: amount == null ? d.amount : amount };
   }
 
+  // Share-link row format (fields separated by ':'):
+  //   text rows    model:size:count
+  //   agent tiers  model:size:count:project
+  //   custom agent model:agent-custom:count:project:fresh:cache:output:cacheSetting
+  // Rows with the removed fixed 'agent' size are dropped with a notice
+  // (plan.md, "Old share links", user's choice A).
   function rowFromLink(chunk) {
     const [model, size, count, project, fresh, cache, output, setting] = chunk.split(':');
     const num = (v, dflt) => (v === undefined || v === '' || !isFinite(Number(v)) ? dflt : Math.max(0, Number(v)));
@@ -263,7 +263,16 @@
     AGENT_SIZES.map((s) => `<option value="${s.id}">${s.label}${s.detail ? ' · ' + s.detail : ''}</option>`).join('') +
     '</optgroup>';
   const pct = (x) => `${Math.round(x * 100)}%`;
-  const srcText = (sources) => `source${sources.length > 1 ? 's' : ''} ${sources.join(', ')}`;
+  // "source 13" / "sources 7, 18" with each number linking to the source
+  // (data.js SOURCES, numbered as in research.md). A derived source links to
+  // the sources it was derived from; 'M' is the original calculator.
+  function sourceLink(n) {
+    const s = SOURCES[n];
+    if (!s) return String(n);
+    if (s.derivedFrom) return `${n} (derived from ${s.derivedFrom.map(sourceLink).join(', ')})`;
+    return `<a href="${s.url}" target="_blank" rel="noopener" title="${s.cite}">${n === 'M' ? 'Masley' : n}</a>`;
+  }
+  const cite = (sources) => `source${sources.length > 1 ? 's' : ''} ${sources.map(sourceLink).join(', ')}`;
 
   // Energy / carbon / water result slots, filled by fillMetrics().
   const METRICS_HTML = `
@@ -295,11 +304,11 @@
           `<option value="${c}"${c === row.cacheSetting ? ' selected' : ''}>${pct(c)} of fresh input</option>`).join('')}</select></label>
       </div>
       <p class="agent-formula">Wh per session = (fresh × ${f.input} + cache reads × ${f.input} × ${pct(row.cacheSetting)} + output × ${f.output}) ÷ 1,000 × PUE ${INPUTS.pue.central}
-        <span class="range-key">central values; low and high use cache-read ${pct(INPUTS.cacheRead.low)}–${pct(INPUTS.cacheRead.high)}, per-token ${INPUTS.providerFactor.low.input}–${INPUTS.providerFactor.high.input} (input) and ${INPUTS.providerFactor.low.output}–${INPUTS.providerFactor.high.output} (output) Wh per 1,000 tokens, PUE ${INPUTS.pue.low}–${INPUTS.pue.high}</span></p>` : '';
+        <span class="range-key">central values; low and high use cache-read ${pct(INPUTS.cacheRead.low)}–${pct(INPUTS.cacheRead.high)}, per-token ${INPUTS.providerFactor.low.input}–${INPUTS.providerFactor.high.input} (input) and ${INPUTS.providerFactor.low.output}–${INPUTS.providerFactor.high.output} (output) Wh per 1,000 tokens, PUE ${INPUTS.pue.low}–${INPUTS.pue.high} · per-token ${cite(INPUTS.providerFactor.sources)}, cache-read ${cite(INPUTS.cacheRead.sources)}, PUE ${cite(INPUTS.pue.sources)}</span></p>` : '';
     const xchecks = AGENT_CROSS_CHECKS.map((c) =>
-      `${c.label} ${sig(c.wh)} Wh${c.range ? ` (${sig(c.range[0])}–${sig(c.range[1])})` : ''} (${srcText(c.sources)})`).join(' · ');
+      `${c.label} ${sig(c.wh)} Wh${c.range ? ` (${sig(c.range[0])}–${sig(c.range[1])})` : ''} (${cite(c.sources)})`).join(' · ');
     return `
-      <p class="agent-head">${tier.label} · <strong>not model-specific</strong>${tier.detail ? ' · ' + tier.detail : ''} · ${srcText(tier.sources)}</p>
+      <p class="agent-head">${tier.label} · <strong>not model-specific</strong>${tier.detail ? ' · ' + tier.detail : ''} · ${cite(tier.sources)}</p>
       ${tokenInputs}
       ${METRICS_HTML}
       <p class="agent-project">Project: <input type="number" min="0" step="1" data-field="project" value="${row.project}"> sessions →
@@ -315,7 +324,7 @@
     if (!Calc.isAgentSize(row.size)) {
       // Per-day range in the selected metric; the first row says which number is which.
       node.querySelector('.row-range').innerHTML = fmtRange(rowRange(row, state.metric)) +
-        (first ? ' <span class="range-key">low · central · high, per day</span>' : '');
+        (first ? ` <span class="range-key">low · central · high, per day · EcoLogits v0.10, ${cite([4, 'M'])}</span>` : '');
       return;
     }
     const out = (name) => node.querySelector(`[data-out="${name}"]`);
@@ -382,7 +391,7 @@
       : '';
     const perUnit = row.type === 'video' ? 'Wh per video-second' : 'GPU Wh per image';
     return `${warning}${METRICS_HTML}
-      <p class="media-measured">${tier.label}: ${fmtInput(input.low)} · ${fmtInput(input.central)} · ${fmtInput(input.high)} ${perUnit}. Measured: ${tier.measured} · ${srcText(input.sources)}</p>`;
+      <p class="media-measured">${tier.label}: ${fmtInput(input.low)} · ${fmtInput(input.central)} · ${fmtInput(input.high)} ${perUnit}. Measured: ${tier.measured} · ${cite(input.sources)}</p>`;
   }
   function fillMediaOutputs(node, row) {
     const unit = row.type === 'video' ? 's of video' : `image${row.amount === 1 ? '' : 's'}`;
@@ -447,7 +456,7 @@
       hours.value = row.hours;
       node.querySelector('.stream-power').innerHTML = `${d.label} power ${fmtInput(input.low)} · ${fmtInput(input.central)} · ${fmtInput(input.high)} W` +
         (d.borrowedNote ? ` · <span class="borrowed">borrowed range: ${d.borrowedNote}</span>` : '') +
-        ` · ${srcText(input.sources)}`;
+        ` · ${cite(input.sources)}`;
       node.querySelector('.stream-results').innerHTML = METRICS_HTML;
       fillStreamOutputs(node, row);
       hours.addEventListener('input', () => { state.streaming[d.id] = Math.max(0, Number(hours.value) || 0); onValues(); });
@@ -456,9 +465,9 @@
     const net = INPUTS.streamNetwork;
     const total = (l) => net[l].network + net[l].dc;
     $('stream-network').innerHTML = `Network and data centre, every device: ${fmtInput(total('low'))} · ${fmtInput(total('central'))} · ${fmtInput(total('high'))} Wh per hour` +
-      ` · <span class="borrowed">borrowed range</span> · ${srcText(net.sources)}`;
-    $('stream-xcheck').textContent = 'Published estimates for one hour of streaming, for comparison (not part of the range): ' +
-      STREAMING_CROSS_CHECKS.map((c) => `${c.label} ${c.g} g ${c.gas} (${c.note}; ${srcText(c.sources)})`).join(' · ') + '.';
+      ` · <span class="borrowed">borrowed range</span> · ${cite(net.sources)}`;
+    $('stream-xcheck').innerHTML = 'Published estimates for one hour of streaming, for comparison (not part of the range): ' +
+      STREAMING_CROSS_CHECKS.map((c) => `${c.label} ${c.g} g ${c.gas} (${c.note}; ${cite(c.sources)})`).join(' · ') + '.';
   }
 
   // Video calls (spec feature 4).
@@ -497,10 +506,10 @@
     const cam = state.calls.camera;
     const power = device.unavailable ? null : INPUTS[device.power[cam]];
     const data = INPUTS[CALL_DATA[cam]];
-    $('call-basis').innerHTML = (power ? `${device.label} power ${rangeText(power, 'W')} (${srcText(power.sources)}) · ` : '') +
-      `data ${rangeText(data, 'GB per hour')} (${srcText(data.sources)}) · ` +
-      `network ${rangeText(INPUTS.networkPerGB, 'Wh per GB')} (${srcText(INPUTS.networkPerGB.sources)}) · ` +
-      `server ${rangeText(INPUTS.serverProxy, 'Wh per hour')}, a proxy from streaming (${srcText(INPUTS.serverProxy.sources)})`;
+    $('call-basis').innerHTML = (power ? `${device.label} power ${rangeText(power, 'W')} (${cite(power.sources)}) · ` : '') +
+      `data ${rangeText(data, 'GB per hour')} (${cite(data.sources)}) · ` +
+      `network ${rangeText(INPUTS.networkPerGB, 'Wh per GB')} (${cite(INPUTS.networkPerGB.sources)}) · ` +
+      `server ${rangeText(INPUTS.serverProxy, 'Wh per hour')}, a proxy from streaming (${cite(INPUTS.serverProxy.sources)})`;
     // Cross-checks: text only, never part of a range. Greenspector is compared
     // live with this calculator's phone, camera-on estimate on the chosen grid.
     const phoneG = Calc.totalDaily([{ callDevice: 'phone', camera: 'on', hours: 1 }], 'carbon', getLoc().grid);
@@ -509,7 +518,7 @@
         let t = `${c.label}: ${c.text}`;
         if (c.phoneRatioG) t += `, about ${sig(c.phoneRatioG / phoneG)}× this calculator’s phone, camera-on estimate on the grid for ${getLoc().label}; the gap is unexplained`;
         if (c.disputed) t += ` — <span class="borrowed">${c.disputed}</span>`;
-        return `${t} (${srcText(c.sources)})`;
+        return `${t} (${cite(c.sources)})`;
       }).join(' · ') + '.';
     fillCallOutputs();
   }
@@ -572,6 +581,7 @@
       : `Add a row to see your footprint.`;
     const other = otherDaily(state.metric);
     if (other > 0) $('verdict').innerHTML += ` Your other digital use ≈ <strong>${fmtMetric(other)}</strong>.`;
+    if (daily > 0) $('verdict').innerHTML += ` <span class="verdict-cite">(Comparisons and typical footprints: ${cite(['M'])}.)</span>`;
     renderTotals();
   }
 
@@ -616,16 +626,130 @@
       return `<div class="drivers-col"><span class="range-title">What drives ${title}</span><ol>` +
         ds.map((d) => `<li><strong>${d.label}</strong>: a swing of ${fmtMetric(d.swing)}` +
           (d.energySwing > 1e-9 ? ` (${fmtMetric(d.energySwing, 'energy')})` : '') +
-          ` from its low to its high — ${d.why} (${srcText(d.sources)}).</li>`).join('') +
+          ` from its low to its high — ${d.why} (${cite(d.sources)}).</li>`).join('') +
         '</ol></div>';
     };
     $('drivers').innerHTML = list('your AI use range', aiRows()) + list('your other digital use range', otherRows());
   }
 
+  // ==========================================================================
+  // "How these numbers are made" (spec: a method section per feature with its
+  // calculation, sources, and limitations). Built from data.js so every value
+  // shown matches the calculation, and every value carries a source link.
+  // ==========================================================================
+  // One table row per INPUTS entry: label, low · central · high, borrowed note, sources.
+  function inputRow(id, show) {
+    const x = INPUTS[id];
+    const v = show || ((l) => fmtInput(x[l]));
+    const borrowed = x.borrowed && x.borrowed.length ? ` <span class="borrowed">(${x.borrowed.join(' and ')} borrowed)</span>` : '';
+    return `<tr><td>${x.label}</td><td>${v('low')} · ${v('central')} · ${v('high')} ${x.unit}${borrowed}</td><td>${cite(x.sources)}</td></tr>`;
+  }
+  const inputTable = (rows) => `<table class="method-table"><thead><tr><th>Input</th><th>Low · central · high</th><th>Source</th></tr></thead><tbody>${rows.join('')}</tbody></table>`;
+  const limits = (items) => `<p class="method-sub">Limitations</p><ul>${items.map((t) => `<li>${t}</li>`).join('')}</ul>`;
+  const section = (title, body) => `<section class="method-section"><h3>${title}</h3>${body}</section>`;
+
+  function renderMethod() {
+    const P = INPUTS.pue;
+    const f = INPUTS.providerFactor;
+    const net = INPUTS.streamNetwork;
+    // Text-row entries whose embodied carbon has no range (min = max), counted live.
+    let flat = 0;
+    let entries = 0;
+    MODELS.forEach((m) => SIZES.forEach((sz) => {
+      const e = m.sizes[sz.id];
+      if (!e) return;
+      entries++;
+      if (e.embmin === e.embmax) flat++;
+    }));
+    const heavy = AGENT_SIZES.find((a) => a.id === 'agent-heavy');
+    const light = AGENT_SIZES.find((a) => a.id === 'agent-light');
+    const html = [
+      section('How the ranges work', `
+        <p>Every result is shown as low · central · high. The low value puts every uncertain input at its low end and the high value puts every input at its high end, so both are <strong>outer bounds</strong>: every assumption at its best or worst case at once, not a likely range. Each total is the sum of its rows’ lows, centrals, and highs, and a year is the day × 365. Charts and the donut use central values.</p>
+        <p>“What drives the range” moves one input at a time from its low to its high while everything else stays central; the change in the total is that input’s swing. Inputs shared by several rows (PUE, water factors, network energy, the server proxy) move once across every row that uses them. All text rows’ EcoLogits ranges move together as one input. Grid intensity is the location you choose and is not varied.</p>
+        ${limits([
+          'All-low and all-high is wider than a statistical range, because it assumes every factor is at its extreme at once.',
+          'The ranges reflect only the sources’ figures. They don’t cover unknowns such as commercial tools nobody has measured.',
+          `“Borrowed” ranges are proxies: the laptop’s measured spread (0.6× to 1.47× of its central value; ${cite(INPUTS.laptopPower.sources)}) applied to values with no sourced range.`,
+        ])}`),
+      section('Text replies', `
+        <p>Per-prompt energy, carbon, and water come from the open-source EcoLogits method (v0.10; ${cite([4])}), as carried in the original calculator (${cite(['M'])}). Carbon = energy × the grid intensity of your location, plus EcoLogits’ embodied hardware emissions. Water is EcoLogits’ blue-water figure: freshwater consumed on site and at power plants. Low and high are EcoLogits’ own 95% range for each model and reply length.</p>
+        ${limits([
+          `Embodied hardware carbon has no range in ${flat} of the ${entries} model-and-length entries (EcoLogits gives one value), so for those only the energy part of carbon varies.`,
+          'These are estimates from the EcoLogits method, not measurements published by the providers.',
+          'Model training is excluded; the calculator covers use only.',
+        ])}`),
+      section('Agent sessions', `
+        <p>Wh per session = (fresh-input tokens × input factor + cache-read tokens × input factor × cache-read setting + output tokens × output factor) ÷ 1,000 × PUE. Cache writes count as fresh input. Carbon uses your location’s grid; water uses the data-centre water factor. Results are not model-specific.</p>
+        <p>The light tier is ${light.tokens.toLocaleString('en-US')} tokens in ${light.calls} calls (${cite(light.sources)}); the heavy tier is ${heavy.tokens.toLocaleString('en-US')} tokens in ${heavy.calls} calls (${cite(heavy.sources)}). Both use the same mix: 3.6% fresh input, 96% cache reads, 0.4% output (${cite([13])}). Advanced mode takes your own token counts; your cache-read setting becomes the central value, and the range still spans 1–25%. The authors’ own figures are shown as cross-checks: Couch 41 Wh per median session (${cite([12])}); Hausfather 600 Wh, 250–1,200 (${cite([13])}).</p>
+        ${inputTable([
+          inputRow('providerFactor', (l) => `${f[l].input} in / ${f[l].output} out`),
+          inputRow('cacheRead', (l) => `${Math.round(INPUTS.cacheRead[l] * 100)}%`),
+          inputRow('pue'), inputRow('dcWater'),
+        ])}
+        ${limits([
+          'No source measures agent-session energy directly. The per-token factors are anchored to one Google disclosure, and the cache-read cost is inferred from prices.',
+          'Bistline et al. note that constant per-token factors can undercount long-context work and overcount repeat-context work, so the error can go either way.',
+          'The light tier’s token mix is borrowed from the heavy-tier source.',
+          'Both sessions come from one person’s usage each. Neither author has lab data.',
+          'The estimate is not model-specific.',
+          'Embodied hardware carbon is excluded, unlike the text rows.',
+        ])}`),
+      section('Generated media', `
+        <p>Video Wh = seconds × tier Wh per video-second × PUE. Image Wh = images × tier Wh per image × CPU+RAM factor × PUE. Carbon uses your location’s grid; water uses the data-centre water factor.</p>
+        ${inputTable(['videoSmall', 'videoMid', 'videoLarge', 'imageDraft', 'imageStandard', 'imageHigh', 'cpuRam', 'pue', 'dcWater'].map((id) => inputRow(id)))}
+        <p>Measured models behind each tier: ${Object.values(MEDIA_TIERS).flat().map((t) => `<em>${t.label}</em>: ${t.measured}`).join('; ')}.</p>
+        ${limits([
+          'All figures come from open models on single research GPUs. No commercial tool has been measured.',
+          'Video energy grows quadratically with clip length. The calculation is linear, so clips much longer than about 5 s are likely undercounted.',
+          'Video tiers differ in model, resolution, and frame rate together. None reaches 1080p or 4K.',
+          'The large video tier’s high value is inferred for a commercial tool (Sora 2 Pro), not measured, and it is not stated whether it already includes data-centre overhead.',
+          'The image tier settings are this project’s choice, not the source’s. The CPU+RAM factor is a proxy taken from video models, and RAM energy in that source is estimated, not measured.',
+          'Water is derived from the calculator’s text-model data and depends on unverified WRI inputs. It is not a measured video or image water figure.',
+          'Embodied hardware carbon is excluded, unlike the text rows.',
+        ])}`),
+      section('Streaming', `
+        <p>Wh per hour = device watts + network + data centre. Carbon uses your location’s grid. Water = [(device + network Wh) × off-site factor + data-centre Wh × data-centre factor] ÷ 1,000.</p>
+        <p>Device power is our own derivation (source 10): the IEA’s device share of streaming energy (72% of 0.077 kWh ≈ 55.4 Wh per hour, over a 70% TV / 15% laptop / 10% tablet / 5% phone mix; ${cite([7])}) split using Carbon Brief’s device ratios (TV ≈ 5× laptop ≈ 100× phone; ${cite([8])}), with a tablet assumed at 5× a phone. Weighting the results by the IEA mix gives 55.2 Wh, against the IEA’s 55.4. Network and data centre are the IEA’s 23% and 5% shares (${cite(net.sources)}).</p>
+        ${inputTable([
+          ...STREAMING_DEVICES.map((d) => inputRow(d.input)),
+          inputRow('streamNetwork', (l) => fmtInput(net[l].network + net[l].dc)),
+          inputRow('offsiteWater'), inputRow('dcWater'),
+        ])}
+        <p>Cross-checks, not part of any range: ${STREAMING_CROSS_CHECKS.map((c) => `${c.label} ${c.g} g ${c.gas} per hour (${c.note}; ${cite(c.sources)})`).join('; ')}.</p>
+        ${limits([
+          'Per-device power is our own derivation from 2019 averages and a press fact-check. No primary per-device measurement was found.',
+          'The tablet value is assumed.',
+          'The ranges for phone, tablet, and network, and the TV’s low value, are borrowed from laptop measurements.',
+          'Watching on cellular data uses more network energy than assumed.',
+          'The water factors are back-calculated and unverified.',
+          'Device manufacturing is excluded.',
+        ])}`),
+      section('Video calls', `
+        <p>Wh per hour = device watts + data (GB) × network energy per GB + server proxy. Carbon uses your location’s grid; water uses the streaming water factors. Tablet and desktop are not available: no source measures their power during calls.</p>
+        ${inputTable(['laptopPower', 'callPhoneCamOn', 'callPhoneCamOff', 'callDataCamOn', 'callDataCamOff', 'networkPerGB', 'serverProxy'].map((id) => inputRow(id)))}
+        <p>Cross-checks, not part of any range: ${CALL_CROSS_CHECKS.map((c) => `${c.label}: ${c.text}${c.disputed ? ` (${c.disputed})` : ''} (${cite(c.sources)})`).join('; ')}.</p>
+        ${limits([
+          'There is no laptop call measurement. The laptop value comes from browsing and streaming, so camera and encoding load is likely underestimated.',
+          'The phone values come from one low-end phone measured in 2021. The 3.85 V battery voltage used to convert its battery drain to watts is our assumption, and the camera-off value was measured with the screen off.',
+          'Network energy per GB is derived, and both Mytton and Guennebaud caution against per-GB intensity figures.',
+          'Server energy is a proxy borrowed from streaming.',
+          'Published estimates for calls differ by up to about 50×.',
+          'Device manufacturing is excluded.',
+        ])}`),
+      section('Comparisons', `
+        <p>Everyday and yearly comparison figures (coffee, driving, flights, diet, home energy, and so on), the typical person’s footprint by location, and the location grid intensities are carried over unchanged from Andy Masley’s calculator (${cite(['M'])}), which draws on EPA, EIA, Ember, Our World in Data, Poore &amp; Nemecek (2018), Wynes &amp; Nicholas (2017), the Founders Pledge Climate &amp; Lifestyle report, and the Water Footprint Network; its page lists the full citations. It is used under the author’s public-domain (CC0) release.</p>`),
+      section('Sources', `<ol class="source-list">${Object.entries(SOURCES).map(([n, s]) =>
+        `<li value="${n === 'M' ? '' : n}"><span class="source-n">${n === 'M' ? 'Masley' : n}.</span> ${s.url ? `<a href="${s.url}" target="_blank" rel="noopener">${s.cite}</a>` : `${s.cite} (${s.derivedFrom.map(sourceLink).join(', ')})`}</li>`).join('')}</ol>
+        <p class="method-sub">Numbers match the project’s research notes (research.md), where each source’s checks and limitations are recorded.</p>`),
+    ];
+    $('method-content').innerHTML = html.join('');
+  }
+
   // Glossary (spec feature 5), opened from the results and the method panel.
   function renderGlossary() {
     $('glossary-list').innerHTML = GLOSSARY.map((g) =>
-      `<dt>${g.term}</dt><dd>${g.def}${g.sources.length ? ` <span class="range-key">(${srcText(g.sources)})</span>` : ''}</dd>`).join('');
+      `<dt>${g.term}</dt><dd>${g.def}${g.sources.length ? ` <span class="range-key">(${cite(g.sources)})</span>` : ''}</dd>`).join('');
   }
 
   const SERIES = ['var(--series-1)', 'var(--series-2)', 'var(--series-3)', 'var(--series-4)', 'var(--series-5)', 'var(--series-6)'];
@@ -780,6 +904,8 @@
 
   loadFromUrl();
   renderGlossary();
+  renderMethod();
+  document.querySelectorAll('[data-cite]').forEach((el) => { el.innerHTML = cite(el.dataset.cite.split(',')); });
   render();
 
   // ==========================================================================

@@ -426,6 +426,36 @@
       def: 'The low and high totals put every assumption at its best or worst case at once. That is wider than a statistical range, so it is not a likely range.' },
   ];
 
+  // ==========================================================================
+  // Sources. Numbers match research.md; every "source N" on the page links
+  // here. Source 10 is our own derivation, so it cites what it was derived
+  // from. 'M' is the original calculator this one is forked from, which holds
+  // the comparison figures, location grids, and their full citation list.
+  // ==========================================================================
+  const SOURCES = {
+    1: { cite: 'Delavande, Pierrard & Luccioni, “Video Killed the Energy Budget,” arXiv:2509.19222 (2025)', url: 'https://arxiv.org/abs/2509.19222' },
+    2: { cite: 'Jegham & Luccioni, “Lights, Camera, Carbon” (2026; under peer review)', url: 'https://sustainableaigroup.com/lightscameracarbon' },
+    4: { cite: 'EcoLogits methodology, “LLM Inference”', url: 'https://ecologits.ai/latest/methodology/llm_inference/' },
+    5: { cite: 'Li, Yang, Islam & Ren, “Making AI Less ‘Thirsty’,” arXiv:2304.03271; Communications of the ACM (2025)', url: 'https://arxiv.org/abs/2304.03271' },
+    7: { cite: 'Kamiya, “The carbon footprint of streaming video: fact-checking the headlines,” IEA (2020)', url: 'https://www.iea.org/commentaries/the-carbon-footprint-of-streaming-video-fact-checking-the-headlines' },
+    8: { cite: 'Carbon Brief, “Factcheck: What is the carbon footprint of streaming video on Netflix?” (2020)', url: 'https://www.carbonbrief.org/factcheck-what-is-the-carbon-footprint-of-streaming-video-on-netflix' },
+    9: { cite: 'The Carbon Trust, “Carbon impact of video streaming” (2021; funded by Netflix)', url: 'https://www.carbontrust.com/our-work-and-impact/guides-reports-and-tools/carbon-impact-of-video-streaming' },
+    10: { cite: 'Per-device power: our own derivation from sources 7 and 8 (see “Streaming” above)', derivedFrom: [7, 8] },
+    11: { cite: 'Kirkeby & Lagermann, “Power Assumptions Matter,” arXiv:2510.12566 (2025–26; preprint)', url: 'https://arxiv.org/abs/2510.12566' },
+    12: { cite: 'Couch, “Electricity use of AI coding agents” (2026)', url: 'https://simonpcouch.com/blog/2026-01-20-cc-impact/' },
+    13: { cite: 'Hausfather, “The real energy use of agentic AI,” The Climate Brink (2026)', url: 'https://www.theclimatebrink.com/p/the-real-energy-use-of-agentic-ai' },
+    14: { cite: 'Bistline et al. (Watershed), “AI Emissions Framework” white paper (2026)', url: 'https://cdn.sanity.io/files/3ogo9b9g/production/a5c1f64ca5864e61b47e6384ee4d0ed31bc861f4.pdf' },
+    16: { cite: 'Obringer et al., “The overlooked environmental footprint of increasing Internet use,” Resources, Conservation and Recycling 167 (2021)', url: 'https://doi.org/10.1016/j.resconrec.2020.105389' },
+    17: { cite: 'Greenspector, “The impact of our videoconferencing uses on mobile and PC! 2022 edition”', url: 'https://blog.greenspector.com/en/videoconferencing-apps-2022/' },
+    18: { cite: 'Mytton, “Zoom, video conferencing, energy, and emissions” (2020; updated 2025)', url: 'https://davidmytton.blog/zoom-video-conferencing-energy-and-emissions/' },
+    19: { cite: 'Mortas, “Assessing the Carbon Footprint of Virtual Meetings,” arXiv:2601.06045 (2025–26)', url: 'https://arxiv.org/abs/2601.06045' },
+    24: { cite: 'Iyengar et al., “Energy Scaling Laws for Diffusion Models,” arXiv:2511.17031 (FAccT ’26)', url: 'https://arxiv.org/abs/2511.17031' },
+    26: { cite: 'Chang, Varvello, Hao & Mukherjee, “Can You See Me Now? A Measurement Study of Zoom, Webex, and Meet,” arXiv:2109.13113 (IMC 2021)', url: 'https://arxiv.org/abs/2109.13113' },
+    27: { cite: 'IPCC, 2021: Annex VII: Glossary, Climate Change 2021: The Physical Science Basis', url: 'https://www.ipcc.ch/report/ar6/wg1/downloads/report/IPCC_AR6_WGI_AnnexVII.pdf' },
+    28: { cite: 'Water Footprint Network, “Glossary”', url: 'https://www.waterfootprint.org/water-footprint-2/glossary/' },
+    M: { cite: 'Andy Masley, AI prompt footprint calculator (CC0): the original this page is forked from, with the comparison figures, location grids, and their full citation list', url: 'https://andymasley.com/visuals/ai-prompt-footprint/' },
+  };
+
   const GAL_TO_L = 3.785411784;
   const DAYS = 365;
 
@@ -434,7 +464,7 @@
     DAILY_ITEMS, ANNUAL_ITEMS, GAL_TO_L, DAYS,
     INPUTS, AGENT_TOKEN_MIX, AGENT_SIZES, CACHE_SETTINGS, AGENT_CROSS_CHECKS,
     MEDIA_TYPES, MEDIA_TIERS, STREAMING_DEVICES, STREAMING_CROSS_CHECKS,
-    CALL_DEVICES, CALL_DATA, CALL_CROSS_CHECKS, ECOLOGITS_INPUT, GLOSSARY,
+    CALL_DEVICES, CALL_DATA, CALL_CROSS_CHECKS, ECOLOGITS_INPUT, GLOSSARY, SOURCES,
   };
   if (typeof module === 'object' && module.exports) module.exports = FootprintData;
   else root.FootprintData = FootprintData;

@@ -129,18 +129,19 @@
 
   <section class="chart-section" aria-label="A day of your AI use vs everyday things">
     <h2>A day of your AI use, next to everyday things</h2>
-    <p class="chart-note">Your AI use and other digital use are shown at their central estimates.</p>
+    <p class="chart-note">Your AI use and other digital use are shown at their central estimates. Comparison figures: <span data-cite="M"></span>.</p>
     <div class="hbars" id="daily-bars"></div>
   </section>
 
   <section class="chart-section split" aria-label="A year of AI use, next to bigger choices">
     <div class="split-col">
       <h2 id="add-title">In a year, things that add this much</h2>
-      <p class="chart-note">Your year of AI use and other digital use are shown at their central estimates.</p>
+      <p class="chart-note">Your year of AI use and other digital use are shown at their central estimates. Comparison figures: <span data-cite="M"></span>.</p>
       <div class="hbars hbars--compact" id="add-bars"></div>
     </div>
     <div class="split-col">
       <h2 id="cut-title">In a year, cuts that would save this much</h2>
+      <p class="chart-note">Figures: <span data-cite="M"></span>.</p>
       <div class="hbars hbars--compact" id="cut-bars"></div>
     </div>
   </section>
@@ -156,24 +157,10 @@
     </p>
   </section>
 
-  <details class="method">
+  <details class="method" id="method">
     <summary>How these numbers are made</summary>
     <div class="method-body">
-      <p>
-        Per-prompt energy, carbon, and water figures come from the open-source
-        <a href="https://ecologits.ai/" target="_blank" rel="noopener">EcoLogits</a> library (v0.10). Carbon is
-        priced on the electricity grid of the region you compare against, plus EcoLogits' embodied hardware
-        emissions. Water is EcoLogits' blue-water (freshwater actually consumed) figure. Training is excluded —
-        split across all users it adds very little to any one person's footprint.
-      </p>
-      <p>
-        Everyday and yearly comparison figures (diet, driving, flights, home energy, coffee, flights, lawns, and
-        so on) are drawn from EPA, EIA, Ember, Our World in Data, Poore &amp; Nemecek (2018), Wynes &amp; Nicholas
-        (2017), the Founders Pledge Climate &amp; Lifestyle report, and the Water Footprint Network. Full citation
-        list and methodology adapted from Andy Masley's
-        <a href="https://andymasley.com/visuals/ai-prompt-footprint/" target="_blank" rel="noopener">AI prompt footprint calculator</a>,
-        used under his public-domain (CC0) release.
-      </p>
+      <div id="method-content"></div>
       <p><button type="button" class="link glossary-open">Glossary of terms</button></p>
     </div>
   </details>

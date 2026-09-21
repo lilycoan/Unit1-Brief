@@ -70,7 +70,7 @@ Ranges come first, so each feature is built range-aware and needs no rework. Age
 
   Existing presets: "Software engineer" moves from 3 old Sonnet agent sessions to 3 light sessions; "AI power user" moves from 2 old Opus agent sessions to 2 heavy sessions. The other existing presets are unchanged.
 - **Range layout (step 1), settled 2026-09-21 (user chose option 1).** Each row shows its per-day range on a small line under its inputs; the "Your AI use" daily and yearly range sits under the verdict sentence. All three numbers in a range share one unit.
-- **Embodied carbon has no range in 48 of 72 EcoLogits entries (found in step 1).** For those, `embmin` = `emb` = `embmax`, so only the energy part of a text row's carbon varies. To be stated in the method panel (step 8).
+- **Embodied carbon has no range in 42 of 63 EcoLogits entries (found in step 1; recounted in step 8).** For those, `embmin` = `emb` = `embmax`, so only the energy part of a text row's carbon varies. The step 1 count (48 of 72) included the removed agent size; the method panel counts live over the current reply lengths and states it.
 - **Agent row layout (step 2), settled 2026-09-21 (user chose option 1).** Agent sessions are chosen from the reply-length dropdown (light, heavy, or "enter tokens"). The model dropdown greys out as "not model-specific", and a box under the row shows energy, carbon, and water ranges, the project readout (default 20 sessions), the cross-checks, and, in custom mode, the token inputs, cache-read setting, and formula. Input and output per-token factors move together as one input, "Per-token energy (provider type)", which reproduces the spec's 602 Wh driver.
 - **Media values (step 3).** The media tiers use the spec's approved (rounded) values, e.g. 4.1 Wh per video-second for CogVideoX-5B, so the page matches the spec's 45.1 Wh. The unrounded Table 4 value (25.3 Wh ÷ 6.125 s ≈ 4.13) would give 45.4 Wh. The tier tooltip also appears as a visible "Measured:" line in each row, since tooltips don't show on touch screens. Media rows are saved in the share link as `m=type:tier:amount`.
 - **Feature 1 limitations still to place (step 8).** Shown on the page now: open models on research GPUs, no commercial tool, embodied carbon excluded, the length warning, and the large tier's inferred high end. Still to go in the method panel: tiers differ in model, resolution, and frame rate at once (none reaches 1080p or 4K); Sora 2 Pro may or may not include overhead; the tier settings are the project's choice; the CPU+RAM proxy and estimated RAM; derived water.
@@ -82,6 +82,8 @@ Ranges come first, so each feature is built range-aware and needs no rework. Age
 - **Glossary sources (step 6), settled 2026-09-21 (user chose to find and verify).** "g CO₂e" cites the IPCC AR6 WG1 glossary (new research entry 27, read in the PDF); "blue water" cites the Water Footprint Network glossary (new entry 28). EPA pages checked had no standalone CO₂e definition. Units and the project's own terms have no source.
 - **Whole calculator (step 7).** The Alex, Jordan, and Robin presets sit in their own row after the label "Profiles, illustrative; adjust to your own day:" and set the location to the US; every preset now sets every input (AI rows, media, streaming, calls). The orb receives both totals as ranges plus each total's top three drivers; its system prompt tells it to stay neutral, treat low and high as outer bounds, point to the method panel and glossary, and say when it isn't sure.
 - **Orb answer length: open finding, not changed (step 7).** `api/ask.js` calls `claude-sonnet-5` with `max_tokens: 300` and no `thinking` setting; on Sonnet 5 that means adaptive thinking is on, and thinking tokens count toward the 300, so a harder question could cut the spoken answer short. Options: set `thinking: {type: "disabled"}` (answers are short and spoken), or raise `max_tokens`. Left for the user to decide; outside step 7's scope.
+- **Citations and method panel (step 8).** Every "source N" on the page links through one `SOURCES` table in `data.js` (numbered as in `research.md`); source 10, our own derivation, links to sources 7 and 8. Comparison figures, typical footprints, and location grids cite Andy Masley's calculator ("Masley"), whose page holds their full citation list, as the original page did. The method panel is generated from `data.js`: one section per feature with its calculation, an input table (low · central · high, borrowed labels, sources), cross-checks, and the spec's limitations, plus sections on ranges, comparisons, and the numbered source list. `node test/check-links.js` got HTTP 200 from all 20 source URLs on 2026-09-21; a 200 shows the page opens, not that it still says what is cited.
+- **Method text changed (step 8), for the user to confirm.** The original panel said training "adds very little to any one person's footprint". That is an unsourced claim of the kind the neutral-framing requirement removes, so the panel now says only that training is excluded and the calculator covers use.
 - **Sources pending user review.** Research entries 1, 13, 24, and 26, added during specification, and 27 and 28, added in step 6, are still marked pending. This doesn't block the build, but it is part of verification.
 
 ## Checklist
@@ -152,10 +154,10 @@ Replace or expand the implementation placeholders below with tasks specific to t
 - [ ] Checkpoint: the whole-calculator checks pass: neutral text, presets, `npx serve .` with the orb API down, and share-link round-trip
 
 **Step 8: Citations and method panel**
-- [ ] Add a method section per feature (calculation, sources, limitations as listed in the spec)
-- [ ] Give every number on the results and in the method panel a citation link
-- [ ] Check links by script where possible; list any the script can't reach for the user to click through
-- [ ] Update `README.md` (file structure, how to run the test script) and the Project section of `AGENTS.md`
+- [x] Add a method section per feature (calculation, sources, limitations as listed in the spec)
+- [x] Give every number on the results and in the method panel a citation link
+- [x] Check links by script where possible; list any the script can't reach for the user to click through
+- [x] Update `README.md` (file structure, how to run the test script) and the Project section of `AGENTS.md`
 - [ ] Checkpoint: whole-calculator acceptance check 5 (every citation link opens)
 
 **Throughout**

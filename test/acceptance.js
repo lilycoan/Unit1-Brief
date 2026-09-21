@@ -496,5 +496,29 @@ check('5.5 a year is 365 days', D.DAYS === 365, `DAYS = ${D.DAYS}`);
 }
 
 // --------------------------------------------------------------------------
+section('Citations (whole-calculator check 5, data part)');
+// --------------------------------------------------------------------------
+// Every source number cited anywhere in data.js has a SOURCES entry that
+// resolves to a link (a derived source must list linked sources). Whether each
+// link opens is checked by `node test/check-links.js`.
+{
+  const cited = new Set();
+  const walk = (o) => {
+    if (Array.isArray(o)) o.forEach(walk);
+    else if (o && typeof o === 'object') {
+      if (Array.isArray(o.sources)) o.sources.forEach((n) => cited.add(n));
+      Object.values(o).forEach(walk);
+    }
+  };
+  walk([D.INPUTS, D.AGENT_SIZES, D.AGENT_CROSS_CHECKS, D.STREAMING_CROSS_CHECKS, D.CALL_CROSS_CHECKS, D.GLOSSARY, D.ECOLOGITS_INPUT]);
+  const resolves = (n) => {
+    const s = D.SOURCES[n];
+    return !!s && (s.url ? /^https:\/\//.test(s.url) : (s.derivedFrom || []).length > 0 && s.derivedFrom.every(resolves));
+  };
+  const bad = [...cited].filter((n) => !resolves(n));
+  check(`every cited source (${cited.size}) resolves to an https link`, bad.length === 0, bad.length ? `unresolved: ${bad.join(', ')}` : [...cited].sort((a, b) => a - b).join(', '));
+}
+
+// --------------------------------------------------------------------------
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exitCode = failed ? 1 : 0;
