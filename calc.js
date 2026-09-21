@@ -37,8 +37,7 @@
   const inputValue = (scenario, inputId) => D.INPUTS[inputId][levelFor(scenario, inputId)];
 
   // Energy (Wh) to the selected metric, for rows that price energy directly
-  // (agent and media rows; streaming and calls later). Water uses the
-  // data-centre water factor.
+  // (agent and media rows). Water uses the data-centre water factor.
   function fromEnergy(wh, metric, grid, scenario) {
     if (metric === 'energy') return wh;
     if (metric === 'carbon') return (wh / 1000) * grid;
@@ -113,13 +112,39 @@
   }
 
   // --------------------------------------------------------------------------
+  // Streaming (spec feature 3). A streaming row is { device, hours }.
+  //   Wh per hour = device watts + network + data centre
+  //   Water (L)   = [(device + network Wh) × off-site factor
+  //                  + data-centre Wh × data-centre factor] ÷ 1,000
+  // --------------------------------------------------------------------------
+  const isStreamingRow = (row) => typeof row.device === 'string';
+  const getStreamingDevice = (id) => D.STREAMING_DEVICES.find((d) => d.id === id);
+  // Energy parts for one hour of streaming on a device.
+  function streamingHourParts(deviceId, scenario) {
+    const device = getStreamingDevice(deviceId);
+    const net = inputValue(scenario, 'streamNetwork');
+    return { device: device ? inputValue(scenario, device.input) : 0, network: net.network, dc: net.dc };
+  }
+  function streamingValue(row, metric, grid, scenario) {
+    if (!row.hours || !getStreamingDevice(row.device)) return 0;
+    const p = streamingHourParts(row.device, scenario);
+    const wh = row.hours * (p.device + p.network + p.dc);
+    if (metric === 'energy') return wh;
+    if (metric === 'carbon') return (wh / 1000) * grid;
+    return (row.hours * ((p.device + p.network) * inputValue(scenario, 'offsiteWater') +
+      p.dc * inputValue(scenario, 'dcWater'))) / 1000;
+  }
+
+  // --------------------------------------------------------------------------
   // Rows and totals
   // --------------------------------------------------------------------------
   // One row's value per day under a scenario (central if omitted).
   // AI rows are text/agent rows { model, size, count, ...agent fields } or
-  // media rows { type, tier, amount }.
+  // media rows { type, tier, amount }; other digital rows are streaming rows
+  // { device, hours }.
   function rowValue(row, metric, grid, scenario) {
     const sc = scenario || SCENARIOS.central;
+    if (isStreamingRow(row)) return streamingValue(row, metric, grid, sc);
     if (isMediaRow(row)) return fromEnergy(mediaWh(row, sc), metric, grid, sc);
     if (!row.count) return 0;
     if (isAgentSize(row.size)) return row.count * fromEnergy(agentSessionWh(row, sc), metric, grid, sc);
@@ -143,13 +168,14 @@
     return rangeOf((sc) => sessions * fromEnergy(agentSessionWh(row, sc), metric, grid, sc));
   }
 
-  // Daily AI total under a scenario (central if omitted).
-  function aiDaily(rows, metric, grid, scenario) {
+  // Daily total of a set of rows ("Your AI use" or "Your other digital use")
+  // under a scenario (central if omitted).
+  function totalDaily(rows, metric, grid, scenario) {
     return rows.reduce((sum, r) => sum + rowValue(r, metric, grid, scenario), 0);
   }
-  // Daily AI total as { low, central, high }: each is the sum of the rows' values.
-  function aiRange(rows, metric, grid) {
-    return rangeOf((sc) => aiDaily(rows, metric, grid, sc));
+  // Daily total as { low, central, high }: each is the sum of the rows' values.
+  function totalRange(rows, metric, grid) {
+    return rangeOf((sc) => totalDaily(rows, metric, grid, sc));
   }
 
   // Donut label for any AI row.
@@ -190,8 +216,9 @@
   return {
     SCENARIOS, LEVELS, ECOLOGITS, levelFor,
     getModel, getLocation, isTextSize, isAgentSize, getAgentSize, isMediaRow, getMediaTier,
-    perPrompt, agentTokens, agentSessionWh, mediaWh,
-    rowValue, rowRange, projectRange, aiDaily, aiRange,
+    isStreamingRow, getStreamingDevice,
+    perPrompt, agentTokens, agentSessionWh, mediaWh, streamingHourParts,
+    rowValue, rowRange, projectRange, totalDaily, totalRange,
     rowShares, dailyFootprint, itemDaily, itemAnnual,
   };
 });

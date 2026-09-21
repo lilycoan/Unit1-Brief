@@ -187,7 +187,80 @@
       sources: [1],
       why: 'a proxy taken from video models; RAM energy in that source is estimated, not measured',
     },
+
+    // Streaming (spec feature 3). Device power is our derivation from the
+    // IEA's device energy share and Carbon Brief's device ratios (source 10).
+    // "Borrowed" = the laptop's relative spread (9/15 = 0.6× to 22/15 ≈ 1.47×)
+    // applied to a value with no sourced range; see BORROWED below.
+    tvPower: {
+      label: 'TV power',
+      unit: 'W',
+      low: 45, central: 75, high: 93.2, // high: one ENERGY STAR 55-inch model
+      borrowed: ['low'],
+      sources: [10, 8, 7],
+      why: 'our own derivation from 2019 averages; the low end is borrowed from laptop measurements',
+    },
+    laptopPower: {
+      label: 'Laptop power',
+      unit: 'W',
+      low: 9, central: 15, high: 22,
+      borrowed: [],
+      sources: [11, 10],
+      why: 'measured for browsing, not video; reporting models assume more',
+    },
+    tabletPower: {
+      label: 'Tablet power',
+      unit: 'W',
+      low: 2.3, central: 3.8, high: 5.6, // central assumed at 5× phone
+      borrowed: ['low', 'high'],
+      sources: [10],
+      why: 'assumed at 5× a phone; the range is borrowed from laptop measurements',
+    },
+    phonePower: {
+      label: 'Phone power',
+      unit: 'W',
+      low: 0.45, central: 0.75, high: 1.1,
+      borrowed: ['low', 'high'],
+      sources: [10],
+      why: 'our own derivation from 2019 averages; the range is borrowed from laptop measurements',
+    },
+    // Network and data centre per streaming hour move together as one input;
+    // they are kept apart because water prices them differently. Central =
+    // the IEA's 23% and 5% shares of 0.077 kWh.
+    streamNetwork: {
+      label: 'Network and data-centre energy (streaming)',
+      unit: 'Wh per hour',
+      low: { network: 17.71 * 9 / 15, dc: 3.85 * 9 / 15 },    // 12.9 total
+      central: { network: 17.71, dc: 3.85 },                  // 21.56 total
+      high: { network: 17.71 * 22 / 15, dc: 3.85 * 22 / 15 }, // 31.6 total
+      borrowed: ['low', 'high'],
+      sources: [7, 8],
+      why: 'a 2019 global average; the range is borrowed from laptop measurements',
+    },
+    offsiteWater: {
+      label: 'Power-plant water per kWh (devices and networks)',
+      unit: 'L per kWh',
+      low: 2.5, central: 2.65, high: 2.8,
+      sources: [4],
+      why: 'back-calculated from the calculator’s text-model data; not checked against the WRI data',
+    },
   };
+
+  // ==========================================================================
+  // Streaming by device (spec feature 3). Each device points at its INPUTS
+  // entry; `borrowedNote` explains which of its values are borrowed.
+  // ==========================================================================
+  const STREAMING_DEVICES = [
+    { id: 'tv', label: 'TV', input: 'tvPower', borrowedNote: 'low value borrowed' },
+    { id: 'laptop', label: 'Laptop', input: 'laptopPower', borrowedNote: '' },
+    { id: 'tablet', label: 'Tablet', input: 'tabletPower', borrowedNote: 'range borrowed; central assumed at 5× a phone' },
+    { id: 'phone', label: 'Phone', input: 'phonePower', borrowedNote: 'range borrowed' },
+  ];
+  // Published whole-hour estimates, shown next to the result (not in any range).
+  const STREAMING_CROSS_CHECKS = [
+    { label: 'IEA', g: 36, gas: 'CO₂', note: 'global average grid, 2019 device mix', sources: [7] },
+    { label: 'Carbon Trust', g: 55, gas: 'CO₂e', note: 'Europe; funded by Netflix', sources: [9] },
+  ];
 
   // ==========================================================================
   // Generated media (spec feature 1). Each tier points at its INPUTS entry.
@@ -246,7 +319,7 @@
     MODELS, SIZES, WORLD_GRID, LOCATIONS, HOMES, DRIVING, DIETS, FLYING,
     DAILY_ITEMS, ANNUAL_ITEMS, GAL_TO_L, DAYS,
     INPUTS, AGENT_TOKEN_MIX, AGENT_SIZES, CACHE_SETTINGS, AGENT_CROSS_CHECKS,
-    MEDIA_TYPES, MEDIA_TIERS,
+    MEDIA_TYPES, MEDIA_TIERS, STREAMING_DEVICES, STREAMING_CROSS_CHECKS,
   };
   if (typeof module === 'object' && module.exports) module.exports = FootprintData;
   else root.FootprintData = FootprintData;

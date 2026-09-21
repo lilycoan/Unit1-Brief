@@ -143,6 +143,7 @@ a { color: var(--terracotta); }
 
 /* ---- Tool layout ---- */
 .tool { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 20px; margin-bottom: 28px; }
+.tool-col { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
 @media (max-width: 760px) { .tool { grid-template-columns: 1fr; } }
 
 .panel { background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); padding: 18px 20px; }
@@ -185,6 +186,17 @@ a { color: var(--terracotta); }
 .media-detail { grid-column: 1 / -1; border: 1px solid var(--border); border-radius: 10px; background: var(--bg); padding: 9px 12px; font-size: 0.82rem; display: flex; flex-direction: column; gap: 6px; }
 .media-detail p { margin: 0; line-height: 1.45; }
 .media-warning { color: var(--gold); }
+
+/* Streaming rows in the other-digital panel */
+.stream-rows { display: flex; flex-direction: column; gap: 10px; margin-bottom: 10px; }
+.stream-label { display: flex; align-items: center; gap: 8px; font-size: 0.9rem; }
+.stream-name { min-width: 4.5em; font-weight: 600; }
+.stream-hours { width: 5em; padding: 6px 8px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); color: var(--text); font-size: 0.9rem; }
+.stream-unit { color: var(--text-soft); font-size: 0.82rem; }
+.stream-power { margin: 3px 0 0; font-size: 0.78rem; color: var(--text-soft); }
+.stream-results { margin-top: 5px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg); padding: 8px 12px; font-size: 0.82rem; }
+.stream-results[hidden] { display: none; }
+.borrowed { color: var(--gold); }
 .media-measured { color: var(--text-soft); }
 
 .addrow { margin-top: 10px; background: none; border: 1px dashed var(--border); border-radius: 8px; padding: 7px 12px; cursor: pointer; color: var(--moss); font-size: 0.88rem; }
@@ -196,8 +208,18 @@ a { color: var(--terracotta); }
 .verdict { font-size: 1.15rem; margin-bottom: 16px; line-height: 1.4; }
 .verdict strong { color: var(--terracotta); }
 /* "Your AI use" total range under the verdict */
-.ai-range { display: flex; flex-direction: column; gap: 2px; margin: -6px 0 16px; font-size: 0.92rem; font-variant-numeric: tabular-nums; }
-.ai-range:empty { display: none; }
+/* The two totals side by side, with a key above and a comparison below */
+.totals { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 14px; margin: -6px 0 6px; font-size: 0.9rem; font-variant-numeric: tabular-nums; }
+.totals:empty { display: none; }
+.totals-key { grid-column: 1 / -1; margin-left: 0; }
+.totals-col { display: flex; flex-direction: column; gap: 2px; }
+/* Label above value so each range stays on one line in the narrow column */
+.totals-col .range-line { display: flex; flex-direction: column; white-space: nowrap; margin-top: 2px; }
+.totals-col .range-period { min-width: 0; font-size: 0.75rem; }
+.range-empty { color: var(--text-soft); font-style: italic; }
+.totals-compare { margin: 0 0 16px; font-size: 0.85rem; color: var(--text-soft); }
+.totals-compare:empty { display: none; }
+@media (max-width: 420px) { .totals { grid-template-columns: 1fr; } }
 .range-title { font-weight: 600; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-soft); }
 .range-title .range-key { text-transform: none; letter-spacing: 0; font-weight: 400; }
 .range-period { display: inline-block; min-width: 4.8em; color: var(--text-soft); }

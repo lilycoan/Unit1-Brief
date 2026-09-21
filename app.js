@@ -6,7 +6,7 @@
     MODELS, SIZES, LOCATIONS, HOMES, DRIVING, DIETS, FLYING,
     DAILY_ITEMS, ANNUAL_ITEMS, DAYS,
     INPUTS, AGENT_SIZES, CACHE_SETTINGS, AGENT_CROSS_CHECKS,
-    MEDIA_TYPES, MEDIA_TIERS,
+    MEDIA_TYPES, MEDIA_TIERS, STREAMING_DEVICES, STREAMING_CROSS_CHECKS,
   } = window.FootprintData;
   const Calc = window.FootprintCalc;
 
@@ -32,7 +32,8 @@
   // State
   // ==========================================================================
   let uidSeq = 1;
-  const state = { rows: [], media: [], metric: 'carbon', persona: 'casual', loc: 'us', home: 'med', drive: 'davg', diet: 'avg', fly: 'some' };
+  const noStreaming = () => Object.fromEntries(STREAMING_DEVICES.map((d) => [d.id, 0]));
+  const state = { rows: [], media: [], streaming: noStreaming(), metric: 'carbon', persona: 'casual', loc: 'us', home: 'med', drive: 'davg', diet: 'avg', fly: 'some' };
   // One-line message shown above the rows (e.g. an old share link was changed).
   let notice = '';
 
@@ -83,6 +84,7 @@
   }
 
   function loadFromUrl() {
+    const streamed = noStreaming();
     try {
       const p = new URLSearchParams(location.hash.slice(1));
       const r = p.get('r');
@@ -106,13 +108,23 @@
       ['metric', 'loc', 'home', 'drive', 'diet', 'fly'].forEach((k) => {
         if (p.get(k)) state[k] = p.get(k);
       });
+      // Streaming hours: s=device:hours,... (applied below, after the preset
+      // fallback, which resets every input)
+      (p.get('s') || '').split(',').filter(Boolean).forEach((chunk) => {
+        const [device, hours] = chunk.split(':');
+        if (device in streamed) streamed[device] = Math.max(0, Number(hours) || 0);
+      });
     } catch (e) { /* ignore malformed url state */ }
-    if (!state.rows.length && !state.media.length) applyPersona(state.persona || 'casual', { silent: true });
+    const anyStreaming = Object.values(streamed).some((h) => h > 0);
+    if (!state.rows.length && !state.media.length && !anyStreaming) applyPersona(state.persona || 'casual', { silent: true });
+    if (anyStreaming) { state.streaming = streamed; state.persona = null; }
   }
   function saveToUrl() {
     const p = new URLSearchParams();
     p.set('r', state.rows.map(rowToLink).join(','));
     if (state.media.length) p.set('m', state.media.map((r) => `${r.type}:${r.tier}:${r.amount}`).join(','));
+    const streamed = otherRows().filter((r) => r.hours);
+    if (streamed.length) p.set('s', streamed.map((r) => `${r.device}:${r.hours}`).join(','));
     p.set('metric', state.metric);
     p.set('loc', state.loc); p.set('home', state.home); p.set('drive', state.drive);
     p.set('diet', state.diet); p.set('fly', state.fly);
@@ -125,6 +137,7 @@
     state.persona = id;
     state.rows = persona.rows.map(([model, size, count]) => newRow(model, size, count));
     state.media = (persona.media || []).map(([type, tier, amount]) => newMediaRow(type, tier, amount));
+    state.streaming = Object.assign(noStreaming(), persona.streaming || {});
     if (!(opts && opts.silent)) render();
   }
 
@@ -134,8 +147,13 @@
   const getLoc = () => Calc.getLocation(state.loc);
   // Every AI row: text and agent rows, then generated-media rows.
   const aiRows = () => state.rows.concat(state.media);
-  const aiDaily = (metric) => Calc.aiDaily(aiRows(), metric, getLoc().grid);
-  const aiRange = (metric) => Calc.aiRange(aiRows(), metric, getLoc().grid);
+  const aiDaily = (metric) => Calc.totalDaily(aiRows(), metric, getLoc().grid);
+  const aiRange = (metric) => Calc.totalRange(aiRows(), metric, getLoc().grid);
+  // Every other-digital row: streaming hours per device (calls come later).
+  // Kept apart from aiRows(), so streaming never changes "Your AI use".
+  const otherRows = () => STREAMING_DEVICES.map((d) => ({ device: d.id, hours: state.streaming[d.id] }));
+  const otherDaily = (metric) => Calc.totalDaily(otherRows(), metric, getLoc().grid);
+  const otherRange = (metric) => Calc.totalRange(otherRows(), metric, getLoc().grid);
   const rowRange = (row, metric) => Calc.rowRange(row, metric, getLoc().grid);
   const projectRange = (row, metric) => Calc.projectRange(row, metric, getLoc().grid);
   const rowShares = (metric) => Calc.rowShares(aiRows(), metric, getLoc().grid);
@@ -167,6 +185,9 @@
     if (v >= 1) return { unit: 'L', conv: (x) => x };
     return { unit: 'mL', conv: (x) => x * 1000 };
   }
+  // A declared input value (watts, Wh per unit) at its own precision, up to
+  // 4 significant figures, e.g. 93.2, 2.228, 12.94 — not rounded like results.
+  const fmtInput = (v) => String(Number(v.toPrecision(4)));
   function fmtMetric(v, metric) {
     const u = unitFor(v, metric || state.metric);
     return sig(u.conv(v)) + ' ' + u.unit;
@@ -327,7 +348,7 @@
       : '';
     const perUnit = row.type === 'video' ? 'Wh per video-second' : 'GPU Wh per image';
     return `${warning}${METRICS_HTML}
-      <p class="media-measured">${tier.label}: ${sig(input.low)} · ${sig(input.central)} · ${sig(input.high)} ${perUnit}. Measured: ${tier.measured} · ${srcText(input.sources)}</p>`;
+      <p class="media-measured">${tier.label}: ${fmtInput(input.low)} · ${fmtInput(input.central)} · ${fmtInput(input.high)} ${perUnit}. Measured: ${tier.measured} · ${srcText(input.sources)}</p>`;
   }
   function fillMediaOutputs(node, row) {
     const unit = row.type === 'video' ? 's of video' : `image${row.amount === 1 ? '' : 's'}`;
@@ -372,6 +393,40 @@
     });
   }
 
+  // Streaming by device (spec feature 3).
+  function fillStreamOutputs(node, row) {
+    const results = node.querySelector('.stream-results');
+    results.hidden = !row.hours;
+    if (row.hours) fillMetrics(results, row, `${sig(row.hours)} h`);
+  }
+  function renderStreaming() {
+    const host = $('stream-rows');
+    host.innerHTML = '';
+    const tpl = $('stream-tpl');
+    otherRows().forEach((row) => {
+      const d = Calc.getStreamingDevice(row.device);
+      const input = INPUTS[d.input];
+      const node = tpl.content.firstElementChild.cloneNode(true);
+      node.dataset.device = d.id;
+      node.querySelector('.stream-name').textContent = d.label;
+      const hours = node.querySelector('.stream-hours');
+      hours.value = row.hours;
+      node.querySelector('.stream-power').innerHTML = `${d.label} power ${fmtInput(input.low)} · ${fmtInput(input.central)} · ${fmtInput(input.high)} W` +
+        (d.borrowedNote ? ` · <span class="borrowed">borrowed range: ${d.borrowedNote}</span>` : '') +
+        ` · ${srcText(input.sources)}`;
+      node.querySelector('.stream-results').innerHTML = METRICS_HTML;
+      fillStreamOutputs(node, row);
+      hours.addEventListener('input', () => { state.streaming[d.id] = Math.max(0, Number(hours.value) || 0); onValues(); });
+      host.appendChild(node);
+    });
+    const net = INPUTS.streamNetwork;
+    const total = (l) => net[l].network + net[l].dc;
+    $('stream-network').innerHTML = `Network and data centre, every device: ${fmtInput(total('low'))} · ${fmtInput(total('central'))} · ${fmtInput(total('high'))} Wh per hour` +
+      ` · <span class="borrowed">borrowed range</span> · ${srcText(net.sources)}`;
+    $('stream-xcheck').textContent = 'Published estimates for one hour of streaming, for comparison (not part of the range): ' +
+      STREAMING_CROSS_CHECKS.map((c) => `${c.label} ${c.g} g ${c.gas} (${c.note}; ${srcText(c.sources)})`).join(' · ') + '.';
+  }
+
   // A typed value changed: refresh every number on the page without
   // rebuilding the inputs, so the box being typed in keeps focus.
   function onValues() {
@@ -384,6 +439,10 @@
     state.media.forEach((row) => {
       const node = $('media-rows').querySelector(`[data-row-id="${row.id}"]`);
       if (node) fillMediaOutputs(node, row);
+    });
+    otherRows().forEach((row) => {
+      const node = $('stream-rows').querySelector(`[data-device="${row.device}"]`);
+      if (node) fillStreamOutputs(node, row);
     });
     renderResults();
     saveToUrl();
@@ -423,18 +482,38 @@
     $('verdict').innerHTML = daily > 0
       ? `Your day of AI use ≈ <strong>${fmtMetric(daily)}</strong> — ${cmpText}${pctText ? ', ' + pctText : ''}.`
       : `Add a row to see your footprint.`;
-    renderAiRange();
+    const other = otherDaily(state.metric);
+    if (other > 0) $('verdict').innerHTML += ` Your other digital use ≈ <strong>${fmtMetric(other)}</strong>.`;
+    renderTotals();
   }
 
-  // "Your AI use" total as low · central · high, per day and per year.
-  function renderAiRange() {
-    const day = aiRange(state.metric);
-    const year = { low: day.low * DAYS, central: day.central * DAYS, high: day.high * DAYS };
-    $('ai-range').innerHTML = day.high > 0
-      ? `<span class="range-title">Range <span class="range-key">low · central · high</span></span>
-         <span class="range-line"><span class="range-period">per day</span> ${fmtRange(day)}</span>
-         <span class="range-line"><span class="range-period">per year</span> ${fmtRange(year)}</span>`
+  // "Your AI use" and "Your other digital use" side by side, each as
+  // low · central · high per day and per year, plus a central comparison.
+  function renderTotals() {
+    const col = (title, day) => {
+      const year = { low: day.low * DAYS, central: day.central * DAYS, high: day.high * DAYS };
+      return `<div class="totals-col"><span class="range-title">${title}</span>` +
+        (day.high > 0
+          ? `<span class="range-line"><span class="range-period">per day</span> ${fmtRange(day)}</span>
+             <span class="range-line"><span class="range-period">per year</span> ${fmtRange(year)}</span>`
+          : '<span class="range-line range-empty">nothing entered</span>') +
+        '</div>';
+    };
+    const ai = aiRange(state.metric);
+    const other = otherRange(state.metric);
+    $('totals').innerHTML = (ai.high > 0 || other.high > 0)
+      ? `<span class="range-key totals-key">low · central · high</span>${col('Your AI use', ai)}${col('Your other digital use', other)}`
       : '';
+    let compare = '';
+    if (ai.central > 0 && other.central > 0) {
+      const ratio = ai.central / other.central;
+      compare = ratio >= 1
+        ? `Central estimates: your AI use is about ${sig(ratio)}× your other digital use.`
+        : `Central estimates: your AI use is about ${sig(1 / ratio)}× less than your other digital use.`;
+    } else if (ai.central > 0) {
+      compare = 'Add streaming hours to compare your AI use with your other digital use.';
+    }
+    $('totals-compare').textContent = compare;
   }
 
   const SERIES = ['var(--series-1)', 'var(--series-2)', 'var(--series-3)', 'var(--series-4)', 'var(--series-5)', 'var(--series-6)'];
@@ -483,22 +562,29 @@
     });
   }
 
+  // Up to `max` bars: every "you" bar above zero, then the largest items.
+  function withYouBars(yous, items, max) {
+    const shown = yous.filter((r) => r.value > 0);
+    const rest = items.filter((r) => r.value > 0).sort((a, b) => b.value - a.value).slice(0, max - shown.length);
+    return shown.concat(rest).sort((a, b) => b.value - a.value);
+  }
   function renderDailyBars() {
-    const daily = aiDaily(state.metric);
-    const rows = [{ label: 'Your AI use', value: daily, isYou: true }]
-      .concat(DAILY_ITEMS.map((it) => ({ label: it.label, value: itemDaily(it, state.metric) })).filter((r) => r.value > 0))
-      .sort((a, b) => b.value - a.value)
-      .slice(0, 8);
-    renderHBars('daily-bars', rows);
+    const yous = [
+      { label: 'Your AI use', value: aiDaily(state.metric), isYou: true },
+      { label: 'Your other digital use', value: otherDaily(state.metric), isYou: true },
+    ];
+    const items = DAILY_ITEMS.map((it) => ({ label: it.label, value: itemDaily(it, state.metric) }));
+    renderHBars('daily-bars', withYouBars(yous, items, 8));
   }
 
   function renderYearBars() {
-    const annual = aiDaily(state.metric) * DAYS;
-    const adds = ANNUAL_ITEMS.filter((it) => it.dir === 'add' && itemAnnual(it, state.metric) > 0)
+    const yous = [
+      { label: 'Your year of AI use', value: aiDaily(state.metric) * DAYS, isYou: true },
+      { label: 'Your year of other digital use', value: otherDaily(state.metric) * DAYS, isYou: true },
+    ];
+    const adds = ANNUAL_ITEMS.filter((it) => it.dir === 'add')
       .map((it) => ({ label: it.label, value: itemAnnual(it, state.metric) }));
-    adds.push({ label: 'Your year of AI use', value: annual, isYou: true });
-    adds.sort((a, b) => b.value - a.value);
-    renderHBars('add-bars', adds.slice(0, 8));
+    renderHBars('add-bars', withYouBars(yous, adds, 8));
 
     const cuts = ANNUAL_ITEMS.filter((it) => it.dir === 'save' && itemAnnual(it, state.metric) > 0)
       .map((it) => ({ label: it.label, value: itemAnnual(it, state.metric), dir: 'save' }))
@@ -536,6 +622,7 @@
     renderNotice();
     renderRows();
     renderMediaRows();
+    renderStreaming();
     renderResults();
     renderContextLine();
   }

@@ -74,6 +74,7 @@ Ranges come first, so each feature is built range-aware and needs no rework. Age
 - **Agent row layout (step 2), settled 2026-09-21 (user chose option 1).** Agent sessions are chosen from the reply-length dropdown (light, heavy, or "enter tokens"). The model dropdown greys out as "not model-specific", and a box under the row shows energy, carbon, and water ranges, the project readout (default 20 sessions), the cross-checks, and, in custom mode, the token inputs, cache-read setting, and formula. Input and output per-token factors move together as one input, "Per-token energy (provider type)", which reproduces the spec's 602 Wh driver.
 - **Media values (step 3).** The media tiers use the spec's approved (rounded) values, e.g. 4.1 Wh per video-second for CogVideoX-5B, so the page matches the spec's 45.1 Wh. The unrounded Table 4 value (25.3 Wh ÷ 6.125 s ≈ 4.13) would give 45.4 Wh. The tier tooltip also appears as a visible "Measured:" line in each row, since tooltips don't show on touch screens. Media rows are saved in the share link as `m=type:tier:amount`.
 - **Feature 1 limitations still to place (step 8).** Shown on the page now: open models on research GPUs, no commercial tool, embodied carbon excluded, the length warning, and the large tier's inferred high end. Still to go in the method panel: tiers differ in model, resolution, and frame rate at once (none reaches 1080p or 4K); Sora 2 Pro may or may not include overhead; the tier settings are the project's choice; the CPU+RAM proxy and estimated RAM; derived water.
+- **Totals layout (step 4), settled 2026-09-21 (user chose option 1).** The left column stacks the input panels ("Your AI use", then "Your other digital use"); the right column is the results card: the verdict mentioning both totals, the two totals side by side (daily and yearly, low · central · high), a one-line central comparison, then the AI-only donut. Streaming network and data-centre energy is one input ("streamNetwork", 12.94 · 21.56 · 31.62 Wh per hour), so its swing matches the spec's 37 Wh; its two parts stay separate for water.
 - **Sources pending user review.** Research entries 1, 13, 24, and 26, added during specification, are still marked pending. This doesn't block the build, but it is part of verification.
 
 ## Checklist
@@ -117,10 +118,10 @@ Replace or expand the implementation placeholders below with tasks specific to t
 - [ ] Checkpoint: acceptance checks 1.1–1.5 pass
 
 **Step 4: "Your other digital use" total and streaming (feature 3)**
-- [ ] Add the second total (daily and yearly, low · central · high) beside "Your AI use," with a comparison between the two
-- [ ] Declare the device watts, network and data-centre energy, and the off-site and data-centre water factors
-- [ ] Add hours-per-device inputs (TV, laptop, tablet, phone) with per-device results, "borrowed range" labels, and the cross-checks (IEA 36 g, Carbon Trust 55 g)
-- [ ] Add "Your other digital use" as a second highlighted bar in the daily and yearly "add" charts, and to the verdict line (user's choice B)
+- [x] Add the second total (daily and yearly, low · central · high) beside "Your AI use," with a comparison between the two
+- [x] Declare the device watts, network and data-centre energy, and the off-site and data-centre water factors
+- [x] Add hours-per-device inputs (TV, laptop, tablet, phone) with per-device results, "borrowed range" labels, and the cross-checks (IEA 36 g, Carbon Trust 55 g)
+- [x] Add "Your other digital use" as a second highlighted bar in the daily and yearly "add" charts, and to the verdict line (user's choice B)
 - [ ] Checkpoint: acceptance checks 3.1–3.5 pass
 
 **Step 5: Video calls (feature 4)**
@@ -172,6 +173,8 @@ Record material changes to the approach, sequence, or checklist and explain why 
 - **2026-09-21, step 2: preset update moved earlier.** Removing the fixed "agent" size would have broken the "Software engineer" and "AI power user" presets, so their switch to 3 light and 2 heavy sessions (planned for step 7) was done in step 2. The two step 0 baseline test rows that used the old size were retired. Result: "Software engineer" falls from 241 to 39 g CO₂e per day (US, central); "AI power user" stays about 1.3 kg.
 - **2026-09-21, step 2: typing no longer drops focus (user approved).** The original calculator rebuilt every row on each keystroke, so a number box lost focus after one character (confirmed on the pre-project code). Typing now updates results in place; rows are rebuilt only when their structure changes.
 - **2026-09-21, step 2: range units follow the central value.** A range's shared unit is now chosen from its central value rather than its high end, so a heavy session reads "76 · 193 · 1,195 g CO₂e" rather than "0.076 · 0.19 · 1.2 kg CO₂e". Text-row displays were unchanged.
+- **2026-09-21, step 4: "you" bars always shown (user approved).** The original charts kept only the top 8 bars, so a small "Your AI use" bar was silently dropped. Both "Your AI use" and "Your other digital use" bars now always appear when above zero, and comparison items fill the rest. Verified: the only differences from step 3 across the 14 regression scenarios are the you-bar now appearing (17 chart instances).
+- **2026-09-21, step 4: totals renamed and inputs shown at their precision.** `aiDaily`/`aiRange` in `calc.js` became `totalDaily`/`totalRange`, since the same sum serves both totals. Declared input values (watts, Wh per unit) now display up to 4 significant figures (e.g. 93.2 W, 2.228 Wh) instead of being rounded like results.
 
 ## Commands
 
