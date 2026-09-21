@@ -237,6 +237,56 @@
       sources: [7, 8],
       why: 'a 2019 global average; the range is borrowed from laptop measurements',
     },
+    // Video calls (spec feature 4). Laptop power is shared with streaming
+    // (laptopPower above): no call-specific laptop measurement exists.
+    callPhoneCamOn: {
+      label: 'Phone power in a call, camera on',
+      unit: 'W',
+      low: 0.75, central: 2.375, high: 4.0, // central = midpoint
+      borrowed: [],
+      sources: [10, 26],
+      why: 'one low-end phone measured in 2021; the battery voltage is our assumption',
+    },
+    callPhoneCamOff: {
+      label: 'Phone power in a call, camera off',
+      unit: 'W',
+      low: 2.0, central: 2.5, high: 3.0,
+      borrowed: [],
+      sources: [26],
+      why: 'one low-end phone, measured audio-only with the screen off',
+    },
+    callDataCamOn: {
+      label: 'Call data, camera on',
+      unit: 'GB per hour',
+      low: 0.62, central: 0.62, high: 3.24,
+      borrowed: [],
+      sources: [17, 18],
+      why: 'depends on the app, view, and video quality',
+    },
+    callDataCamOff: {
+      label: 'Call data, camera off',
+      unit: 'GB per hour',
+      low: 0.053, central: 0.31, high: 1.62, // central = 50% of camera on; low = audio only
+      borrowed: [],
+      sources: [17, 19],
+      why: 'the central value assumes camera-off halves data use',
+    },
+    networkPerGB: {
+      label: 'Network energy per GB (calls)',
+      unit: 'Wh per GB',
+      low: 9.57 * 9 / 15, central: 9.57, high: 15, // central: IEA-derived 17.71 Wh ÷ 1.85 GB
+      borrowed: ['low'],
+      sources: [7, 18],
+      why: 'derived; both Mytton and Guennebaud caution against per-GB intensity figures',
+    },
+    serverProxy: {
+      label: 'Server energy per call hour',
+      unit: 'Wh per hour',
+      low: 3.85 * 9 / 15, central: 3.85, high: 3.85 * 22 / 15, // streaming data-centre share
+      borrowed: ['low', 'high'],
+      sources: [7],
+      why: 'a proxy borrowed from streaming; no call-server measurement found',
+    },
     offsiteWater: {
       label: 'Power-plant water per kWh (devices and networks)',
       unit: 'L per kWh',
@@ -256,6 +306,28 @@
     { id: 'tablet', label: 'Tablet', input: 'tabletPower', borrowedNote: 'range borrowed; central assumed at 5× a phone' },
     { id: 'phone', label: 'Phone', input: 'phonePower', borrowedNote: 'range borrowed' },
   ];
+  // ==========================================================================
+  // Video calls (spec feature 4). `power` names the INPUTS entry for each
+  // camera setting; devices without call data are listed with the reason.
+  // ==========================================================================
+  const CALL_DEVICES = [
+    { id: 'laptop', label: 'Laptop', power: { on: 'laptopPower', off: 'laptopPower' } },
+    { id: 'phone', label: 'Phone', power: { on: 'callPhoneCamOn', off: 'callPhoneCamOff' } },
+    { id: 'tablet', label: 'Tablet', unavailable: 'no source measures tablet power during video calls' },
+    { id: 'desktop', label: 'Desktop', unavailable: 'no source measures desktop power during video calls' },
+  ];
+  const CALL_DATA = { on: 'callDataCamOn', off: 'callDataCamOff' };
+  // Published per-hour estimates, shown as text only (not in any range).
+  // `phoneRatioG` marks the figure compared live with this calculator's phone
+  // estimate on the chosen grid.
+  const CALL_CROSS_CHECKS = [
+    { label: 'Greenspector', text: '19 g CO₂e per hour audio only and 66 g camera on, measured on a 2016 phone; grid not stated',
+      phoneRatioG: 66, sources: [17] },
+    { label: 'Mytton', text: '12 g CO₂ per hour, network only, UK grid', sources: [18] },
+    { label: 'Obringer et al.', text: '150–1,000 g CO₂ per hour and a “96% camera-off saving”',
+      disputed: 'disputed upper estimate; method not verified', sources: [16] },
+  ];
+
   // Published whole-hour estimates, shown next to the result (not in any range).
   const STREAMING_CROSS_CHECKS = [
     { label: 'IEA', g: 36, gas: 'CO₂', note: 'global average grid, 2019 device mix', sources: [7] },
@@ -320,6 +392,7 @@
     DAILY_ITEMS, ANNUAL_ITEMS, GAL_TO_L, DAYS,
     INPUTS, AGENT_TOKEN_MIX, AGENT_SIZES, CACHE_SETTINGS, AGENT_CROSS_CHECKS,
     MEDIA_TYPES, MEDIA_TIERS, STREAMING_DEVICES, STREAMING_CROSS_CHECKS,
+    CALL_DEVICES, CALL_DATA, CALL_CROSS_CHECKS,
   };
   if (typeof module === 'object' && module.exports) module.exports = FootprintData;
   else root.FootprintData = FootprintData;

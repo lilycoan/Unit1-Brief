@@ -136,14 +136,46 @@
   }
 
   // --------------------------------------------------------------------------
+  // Video calls (spec feature 4). A call row is { callDevice, camera, hours }.
+  //   Wh per hour = device watts + data (GB) × network Wh per GB + server proxy
+  //   Water (L)   = [(device + network Wh) × off-site factor
+  //                  + server Wh × data-centre factor] ÷ 1,000
+  // Devices without call data (tablet, desktop) contribute nothing.
+  // --------------------------------------------------------------------------
+  const isCallRow = (row) => typeof row.callDevice === 'string';
+  const getCallDevice = (id) => D.CALL_DEVICES.find((d) => d.id === id);
+  // Energy parts for one hour of a call, or null if the device has no data.
+  function callHourParts(deviceId, camera, scenario) {
+    const device = getCallDevice(deviceId);
+    if (!device || device.unavailable) return null;
+    const cam = camera === 'off' ? 'off' : 'on';
+    const gb = inputValue(scenario, D.CALL_DATA[cam]);
+    return {
+      device: inputValue(scenario, device.power[cam]),
+      network: gb * inputValue(scenario, 'networkPerGB'),
+      server: inputValue(scenario, 'serverProxy'),
+    };
+  }
+  function callValue(row, metric, grid, scenario) {
+    const p = row.hours ? callHourParts(row.callDevice, row.camera, scenario) : null;
+    if (!p) return 0;
+    const wh = row.hours * (p.device + p.network + p.server);
+    if (metric === 'energy') return wh;
+    if (metric === 'carbon') return (wh / 1000) * grid;
+    return (row.hours * ((p.device + p.network) * inputValue(scenario, 'offsiteWater') +
+      p.server * inputValue(scenario, 'dcWater'))) / 1000;
+  }
+
+  // --------------------------------------------------------------------------
   // Rows and totals
   // --------------------------------------------------------------------------
   // One row's value per day under a scenario (central if omitted).
   // AI rows are text/agent rows { model, size, count, ...agent fields } or
   // media rows { type, tier, amount }; other digital rows are streaming rows
-  // { device, hours }.
+  // { device, hours } or call rows { callDevice, camera, hours }.
   function rowValue(row, metric, grid, scenario) {
     const sc = scenario || SCENARIOS.central;
+    if (isCallRow(row)) return callValue(row, metric, grid, sc);
     if (isStreamingRow(row)) return streamingValue(row, metric, grid, sc);
     if (isMediaRow(row)) return fromEnergy(mediaWh(row, sc), metric, grid, sc);
     if (!row.count) return 0;
@@ -216,8 +248,8 @@
   return {
     SCENARIOS, LEVELS, ECOLOGITS, levelFor,
     getModel, getLocation, isTextSize, isAgentSize, getAgentSize, isMediaRow, getMediaTier,
-    isStreamingRow, getStreamingDevice,
-    perPrompt, agentTokens, agentSessionWh, mediaWh, streamingHourParts,
+    isStreamingRow, getStreamingDevice, isCallRow, getCallDevice,
+    perPrompt, agentTokens, agentSessionWh, mediaWh, streamingHourParts, callHourParts,
     rowValue, rowRange, projectRange, totalDaily, totalRange,
     rowShares, dailyFootprint, itemDaily, itemAnnual,
   };

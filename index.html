@@ -93,6 +93,21 @@
       <div class="stream-rows" id="stream-rows"></div>
       <p class="group-note" id="stream-network"></p>
       <p class="group-note" id="stream-xcheck"></p>
+
+      <div class="calls-group">
+        <h3 class="group-title">Video calls</h3>
+        <p class="group-note">No laptop call has been measured: the laptop value comes from browsing and streaming, so camera and encoding load is likely underestimated. Published estimates for calls differ by up to about 50×. Device manufacturing is not included.</p>
+        <div class="call-inputs">
+          <label>Hours per day <input type="number" id="call-hours" min="0" step="0.5" inputmode="decimal"></label>
+          <label>Device <select id="call-device"></select></label>
+          <label>Camera <select id="call-camera"><option value="on">On</option><option value="off">Off</option></select></label>
+        </div>
+        <p class="call-unavailable" id="call-unavailable" hidden></p>
+        <div class="stream-results" id="call-results"></div>
+        <p class="group-note" id="call-parts"></p>
+        <p class="group-note" id="call-basis"></p>
+        <p class="group-note" id="call-xcheck"></p>
+      </div>
     </section>
     </div>
 

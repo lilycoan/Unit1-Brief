@@ -256,7 +256,7 @@ Central values per hour:
 
 **Cross-checks shown to the user.**
 
-- Greenspector (source 17): 19 g/h audio only and 66 g/h camera on (2016 phone, grid not stated). This is about 12× our phone estimate; the gap is unexplained.
+- Greenspector (source 17): 19 g/h audio only and 66 g/h camera on (2016 phone, grid not stated). This is several times our phone estimate (about 14× on the US grid, 43× on the UK grid); the page shows the ratio for the chosen grid. The gap is unexplained.
 - Mytton (source 18): 12 g/h, network only, UK grid.
 - Obringer (source 16): 150–1,000 g/h and a "96% camera-off saving," shown as text only and labelled "disputed upper estimate; method not verified." It is not part of any range.
 
@@ -365,6 +365,8 @@ Record ideas that will not be part of this project.
 ## Revisions
 
 If implementation changes the intended result, update the specification and record what changed and why.
+
+- **2026-09-21, feature 4 cross-check (user approved during step 5).** The Greenspector comparison said "about 12× our phone estimate". The ratio depends on the grid (about 14× US, 43× UK), so no single figure holds; the page now computes it for the chosen grid. Wording updated above.
 
 ## Commands
 

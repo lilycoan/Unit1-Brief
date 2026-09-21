@@ -75,6 +75,9 @@ Ranges come first, so each feature is built range-aware and needs no rework. Age
 - **Media values (step 3).** The media tiers use the spec's approved (rounded) values, e.g. 4.1 Wh per video-second for CogVideoX-5B, so the page matches the spec's 45.1 Wh. The unrounded Table 4 value (25.3 Wh ÷ 6.125 s ≈ 4.13) would give 45.4 Wh. The tier tooltip also appears as a visible "Measured:" line in each row, since tooltips don't show on touch screens. Media rows are saved in the share link as `m=type:tier:amount`.
 - **Feature 1 limitations still to place (step 8).** Shown on the page now: open models on research GPUs, no commercial tool, embodied carbon excluded, the length warning, and the large tier's inferred high end. Still to go in the method panel: tiers differ in model, resolution, and frame rate at once (none reaches 1080p or 4K); Sora 2 Pro may or may not include overhead; the tier settings are the project's choice; the CPU+RAM proxy and estimated RAM; derived water.
 - **Totals layout (step 4), settled 2026-09-21 (user chose option 1).** The left column stacks the input panels ("Your AI use", then "Your other digital use"); the right column is the results card: the verdict mentioning both totals, the two totals side by side (daily and yearly, low · central · high), a one-line central comparison, then the AI-only donut. Streaming network and data-centre energy is one input ("streamNetwork", 12.94 · 21.56 · 31.62 Wh per hour), so its swing matches the spec's 37 Wh; its two parts stay separate for water.
+- **Video calls (step 5).** One set of call inputs (hours, device, camera), not rows, matching the spec. Laptop call power reuses the streaming `laptopPower` input (same values and sources), so in step 6 moving "laptop power" moves streaming and calls together. A per-hour central breakdown (device · network · server) and the other camera setting's result are shown, which is how 4.2's "the device dominates" appears. Shared in the link as `c=hours:device:camera`.
+- **Greenspector ratio (step 5), settled 2026-09-21 (user chose the live ratio).** The ratio depends on the grid (about 14× US, 43× UK), so the page computes it for the chosen grid. `spec.md` feature 4 wording updated and recorded under its Revisions.
+- **Feature 4 limitations still to place (step 8).** Shown on the page now: no laptop call measurement, estimates differ by up to about 50×, device manufacturing excluded, the server proxy, and borrowed ranges. Still to go in the method panel: the phone is one low-end 2021 model, the 3.85 V battery voltage is our assumption, camera-off was measured with the screen off, and both Mytton and Guennebaud caution against per-GB figures.
 - **Sources pending user review.** Research entries 1, 13, 24, and 26, added during specification, are still marked pending. This doesn't block the build, but it is part of verification.
 
 ## Checklist
@@ -125,9 +128,9 @@ Replace or expand the implementation placeholders below with tasks specific to t
 - [ ] Checkpoint: acceptance checks 3.1–3.5 pass
 
 **Step 5: Video calls (feature 4)**
-- [ ] Declare the call device power, data per hour, network Wh per GB, and server proxy
-- [ ] Add hours, device (laptop or phone; tablet and desktop "not available," with the reason), and camera inputs
-- [ ] Show the cross-checks: Greenspector, Mytton, and Obringer (text only, labelled "disputed upper estimate")
+- [x] Declare the call device power, data per hour, network Wh per GB, and server proxy
+- [x] Add hours, device (laptop or phone; tablet and desktop "not available," with the reason), and camera inputs
+- [x] Show the cross-checks: Greenspector, Mytton, and Obringer (text only, labelled "disputed upper estimate")
 - [ ] Checkpoint: acceptance checks 4.1–4.6 pass
 
 **Step 6: Drivers, outer bounds, and glossary (rest of feature 5)**

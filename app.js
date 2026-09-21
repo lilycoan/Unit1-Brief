@@ -7,6 +7,7 @@
     DAILY_ITEMS, ANNUAL_ITEMS, DAYS,
     INPUTS, AGENT_SIZES, CACHE_SETTINGS, AGENT_CROSS_CHECKS,
     MEDIA_TYPES, MEDIA_TIERS, STREAMING_DEVICES, STREAMING_CROSS_CHECKS,
+    CALL_DEVICES, CALL_DATA, CALL_CROSS_CHECKS,
   } = window.FootprintData;
   const Calc = window.FootprintCalc;
 
@@ -33,7 +34,8 @@
   // ==========================================================================
   let uidSeq = 1;
   const noStreaming = () => Object.fromEntries(STREAMING_DEVICES.map((d) => [d.id, 0]));
-  const state = { rows: [], media: [], streaming: noStreaming(), metric: 'carbon', persona: 'casual', loc: 'us', home: 'med', drive: 'davg', diet: 'avg', fly: 'some' };
+  const noCalls = () => ({ hours: 0, device: 'laptop', camera: 'on' });
+  const state = { rows: [], media: [], streaming: noStreaming(), calls: noCalls(), metric: 'carbon', persona: 'casual', loc: 'us', home: 'med', drive: 'davg', diet: 'avg', fly: 'some' };
   // One-line message shown above the rows (e.g. an old share link was changed).
   let notice = '';
 
@@ -85,6 +87,7 @@
 
   function loadFromUrl() {
     const streamed = noStreaming();
+    const calls = noCalls();
     try {
       const p = new URLSearchParams(location.hash.slice(1));
       const r = p.get('r');
@@ -114,17 +117,26 @@
         const [device, hours] = chunk.split(':');
         if (device in streamed) streamed[device] = Math.max(0, Number(hours) || 0);
       });
+      // Video calls: c=hours:device:camera
+      const c = (p.get('c') || '').split(':');
+      if (Number(c[0]) > 0 && Calc.getCallDevice(c[1])) {
+        calls.hours = Number(c[0]);
+        calls.device = c[1];
+        calls.camera = c[2] === 'off' ? 'off' : 'on';
+      }
     } catch (e) { /* ignore malformed url state */ }
     const anyStreaming = Object.values(streamed).some((h) => h > 0);
-    if (!state.rows.length && !state.media.length && !anyStreaming) applyPersona(state.persona || 'casual', { silent: true });
+    if (!state.rows.length && !state.media.length && !anyStreaming && !calls.hours) applyPersona(state.persona || 'casual', { silent: true });
     if (anyStreaming) { state.streaming = streamed; state.persona = null; }
+    if (calls.hours) { state.calls = calls; state.persona = null; }
   }
   function saveToUrl() {
     const p = new URLSearchParams();
     p.set('r', state.rows.map(rowToLink).join(','));
     if (state.media.length) p.set('m', state.media.map((r) => `${r.type}:${r.tier}:${r.amount}`).join(','));
-    const streamed = otherRows().filter((r) => r.hours);
+    const streamed = otherRows().filter((r) => Calc.isStreamingRow(r) && r.hours);
     if (streamed.length) p.set('s', streamed.map((r) => `${r.device}:${r.hours}`).join(','));
+    if (state.calls.hours) p.set('c', `${state.calls.hours}:${state.calls.device}:${state.calls.camera}`);
     p.set('metric', state.metric);
     p.set('loc', state.loc); p.set('home', state.home); p.set('drive', state.drive);
     p.set('diet', state.diet); p.set('fly', state.fly);
@@ -138,6 +150,7 @@
     state.rows = persona.rows.map(([model, size, count]) => newRow(model, size, count));
     state.media = (persona.media || []).map(([type, tier, amount]) => newMediaRow(type, tier, amount));
     state.streaming = Object.assign(noStreaming(), persona.streaming || {});
+    state.calls = Object.assign(noCalls(), persona.calls || {});
     if (!(opts && opts.silent)) render();
   }
 
@@ -149,9 +162,10 @@
   const aiRows = () => state.rows.concat(state.media);
   const aiDaily = (metric) => Calc.totalDaily(aiRows(), metric, getLoc().grid);
   const aiRange = (metric) => Calc.totalRange(aiRows(), metric, getLoc().grid);
-  // Every other-digital row: streaming hours per device (calls come later).
-  // Kept apart from aiRows(), so streaming never changes "Your AI use".
-  const otherRows = () => STREAMING_DEVICES.map((d) => ({ device: d.id, hours: state.streaming[d.id] }));
+  // Every other-digital row: streaming hours per device, then the call.
+  // Kept apart from aiRows(), so these never change "Your AI use".
+  const callRow = () => ({ callDevice: state.calls.device, camera: state.calls.camera, hours: state.calls.hours });
+  const otherRows = () => STREAMING_DEVICES.map((d) => ({ device: d.id, hours: state.streaming[d.id] })).concat([callRow()]);
   const otherDaily = (metric) => Calc.totalDaily(otherRows(), metric, getLoc().grid);
   const otherRange = (metric) => Calc.totalRange(otherRows(), metric, getLoc().grid);
   const rowRange = (row, metric) => Calc.rowRange(row, metric, getLoc().grid);
@@ -403,7 +417,7 @@
     const host = $('stream-rows');
     host.innerHTML = '';
     const tpl = $('stream-tpl');
-    otherRows().forEach((row) => {
+    otherRows().filter(Calc.isStreamingRow).forEach((row) => {
       const d = Calc.getStreamingDevice(row.device);
       const input = INPUTS[d.input];
       const node = tpl.content.firstElementChild.cloneNode(true);
@@ -427,6 +441,59 @@
       STREAMING_CROSS_CHECKS.map((c) => `${c.label} ${c.g} g ${c.gas} (${c.note}; ${srcText(c.sources)})`).join(' · ') + '.';
   }
 
+  // Video calls (spec feature 4).
+  const rangeText = (input, unit) => `${fmtInput(input.low)} · ${fmtInput(input.central)} · ${fmtInput(input.high)} ${unit}` +
+    (input.borrowed && input.borrowed.length ? ` <span class="borrowed">(${input.borrowed.join(' and ')} borrowed)</span>` : '');
+  function fillCallOutputs() {
+    const row = callRow();
+    const device = Calc.getCallDevice(row.callDevice);
+    $('call-unavailable').hidden = !device.unavailable;
+    $('call-unavailable').textContent = device.unavailable
+      ? `${device.label}: not available — ${device.unavailable}, so nothing is added to your totals.` : '';
+    const results = $('call-results');
+    results.hidden = !row.hours || !!device.unavailable;
+    if (!results.hidden) fillMetrics(results, row, `${sig(row.hours)} h`);
+    if (device.unavailable) { $('call-parts').textContent = ''; return; }
+    // Per-hour central breakdown, and what the other camera setting gives.
+    const p = Calc.callHourParts(row.callDevice, row.camera, Calc.SCENARIOS.central);
+    const total = p.device + p.network + p.server;
+    const other = row.camera === 'on' ? 'off' : 'on';
+    const q = Calc.callHourParts(row.callDevice, other, Calc.SCENARIOS.central);
+    const otherTotal = q.device + q.network + q.server;
+    const change = Math.round((otherTotal / total - 1) * 100);
+    const f3 = (v) => String(Number(v.toPrecision(3))); // spec-level precision, e.g. 24.8
+    $('call-parts').textContent = `One hour, central: device ${f3(p.device)} Wh (${Math.round((p.device / total) * 100)}%) · ` +
+      `network ${f3(p.network)} Wh · server ${f3(p.server)} Wh = ${f3(total)} Wh. ` +
+      `Camera ${other}: ${f3(otherTotal)} Wh (${change > 0 ? '+' : '−'}${Math.abs(change)}%).`;
+  }
+  function renderCalls() {
+    $('call-hours').value = state.calls.hours;
+    $('call-device').innerHTML = CALL_DEVICES.map((d) =>
+      `<option value="${d.id}">${d.label}${d.unavailable ? ' (not available)' : ''}</option>`).join('');
+    $('call-device').value = state.calls.device;
+    $('call-camera').value = state.calls.camera;
+    $('call-results').innerHTML = METRICS_HTML;
+    const device = Calc.getCallDevice(state.calls.device);
+    const cam = state.calls.camera;
+    const power = device.unavailable ? null : INPUTS[device.power[cam]];
+    const data = INPUTS[CALL_DATA[cam]];
+    $('call-basis').innerHTML = (power ? `${device.label} power ${rangeText(power, 'W')} (${srcText(power.sources)}) · ` : '') +
+      `data ${rangeText(data, 'GB per hour')} (${srcText(data.sources)}) · ` +
+      `network ${rangeText(INPUTS.networkPerGB, 'Wh per GB')} (${srcText(INPUTS.networkPerGB.sources)}) · ` +
+      `server ${rangeText(INPUTS.serverProxy, 'Wh per hour')}, a proxy from streaming (${srcText(INPUTS.serverProxy.sources)})`;
+    // Cross-checks: text only, never part of a range. Greenspector is compared
+    // live with this calculator's phone, camera-on estimate on the chosen grid.
+    const phoneG = Calc.totalDaily([{ callDevice: 'phone', camera: 'on', hours: 1 }], 'carbon', getLoc().grid);
+    $('call-xcheck').innerHTML = 'Published estimates for one hour of a call, for comparison (not part of the range): ' +
+      CALL_CROSS_CHECKS.map((c) => {
+        let t = `${c.label}: ${c.text}`;
+        if (c.phoneRatioG) t += `, about ${sig(c.phoneRatioG / phoneG)}× this calculator’s phone, camera-on estimate on the grid for ${getLoc().label}; the gap is unexplained`;
+        if (c.disputed) t += ` — <span class="borrowed">${c.disputed}</span>`;
+        return `${t} (${srcText(c.sources)})`;
+      }).join(' · ') + '.';
+    fillCallOutputs();
+  }
+
   // A typed value changed: refresh every number on the page without
   // rebuilding the inputs, so the box being typed in keeps focus.
   function onValues() {
@@ -440,10 +507,11 @@
       const node = $('media-rows').querySelector(`[data-row-id="${row.id}"]`);
       if (node) fillMediaOutputs(node, row);
     });
-    otherRows().forEach((row) => {
+    otherRows().filter(Calc.isStreamingRow).forEach((row) => {
       const node = $('stream-rows').querySelector(`[data-device="${row.device}"]`);
       if (node) fillStreamOutputs(node, row);
     });
+    fillCallOutputs();
     renderResults();
     saveToUrl();
   }
@@ -511,7 +579,7 @@
         ? `Central estimates: your AI use is about ${sig(ratio)}× your other digital use.`
         : `Central estimates: your AI use is about ${sig(1 / ratio)}× less than your other digital use.`;
     } else if (ai.central > 0) {
-      compare = 'Add streaming hours to compare your AI use with your other digital use.';
+      compare = 'Add streaming or call hours to compare your AI use with your other digital use.';
     }
     $('totals-compare').textContent = compare;
   }
@@ -623,6 +691,7 @@
     renderRows();
     renderMediaRows();
     renderStreaming();
+    renderCalls();
     renderResults();
     renderContextLine();
   }
@@ -637,6 +706,10 @@
     state.rows.push(newRow(MODELS[0].id, 'chat', 3));
     state.persona = null;
     render(); saveToUrl();
+  });
+  $('call-hours').addEventListener('input', (e) => { state.calls.hours = Math.max(0, Number(e.target.value) || 0); onValues(); });
+  ['device', 'camera'].forEach((k) => {
+    $(`call-${k}`).addEventListener('change', (e) => { state.calls[k] = e.target.value; state.persona = null; render(); saveToUrl(); });
   });
   $('addmedia').addEventListener('click', () => {
     state.media.push(newMediaRow('image'));

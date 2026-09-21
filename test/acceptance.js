@@ -350,5 +350,71 @@ for (const d of D.STREAMING_DEVICES) {
 }
 
 // --------------------------------------------------------------------------
+section('Feature 4: video calls (spec 4.1–4.6)');
+// --------------------------------------------------------------------------
+
+// Hand calculation, 1 h on a laptop, camera on, central values:
+//   Wh    = 15 + 0.62 × 9.57 + 3.85                             = 24.7834 Wh
+//   water = [(15 + 5.9334) × 2.65 + 3.85 × 3.85] ÷ 1,000          = 0.070296 L
+const call = (callDevice, camera, hours) => [{ callDevice, camera, hours }];
+
+// 4.1: 24.8 Wh; ~9.4 g CO2e on the US grid; ~70 mL.
+approx('4.1 1 h laptop, camera on, central energy (Wh)', Calc.totalDaily(call('laptop', 'on', 1), 'energy', US), 24.8, 0.05);
+approx('4.1 1 h laptop, camera on, central carbon, US (g)', Calc.totalDaily(call('laptop', 'on', 1), 'carbon', US), 9.4, 0.05);
+approx('4.1 1 h laptop, camera on, central water (mL)', Calc.totalDaily(call('laptop', 'on', 1), 'water', US) * 1000, 70, 0.5);
+
+// 4.2: camera off on a laptop → 21.8 Wh (−12%), and the device dominates.
+{
+  const on = Calc.totalDaily(call('laptop', 'on', 1), 'energy', US);
+  const off = Calc.totalDaily(call('laptop', 'off', 1), 'energy', US);
+  approx('4.2 1 h laptop, camera off, central energy (Wh)', off, 21.8, 0.05);
+  approx('4.2 camera-off change on a laptop (%)', (off / on - 1) * 100, -12, 0.5);
+  const p = Calc.callHourParts('laptop', 'on', Calc.SCENARIOS.central);
+  check('4.2 laptop: the device is the largest part', p.device > p.network && p.device > p.server,
+    `device ${round(p.device)} · network ${round(p.network)} · server ${round(p.server)} Wh`);
+}
+
+// 4.3: 1 h on a phone, camera on, 12.2 Wh.
+approx('4.3 1 h phone, camera on, central energy (Wh)', Calc.totalDaily(call('phone', 'on', 1), 'energy', US), 12.2, 0.05);
+
+// Spec's per-hour central table (energy Wh, carbon g, water mL).
+for (const [dev, cam, wh, g, ml] of [['laptop', 'on', 24.8, 9.4, 70], ['laptop', 'off', 21.8, 8.3, 62],
+  ['phone', 'on', 12.2, 4.6, 37], ['phone', 'off', 9.3, 3.5, 29]]) {
+  const r = call(dev, cam, 1);
+  approx(`per hour, ${dev} camera ${cam}: energy (Wh)`, Calc.totalDaily(r, 'energy', US), wh, 0.05);
+  approx(`per hour, ${dev} camera ${cam}: carbon, US (g)`, Calc.totalDaily(r, 'carbon', US), g, 0.05);
+  approx(`per hour, ${dev} camera ${cam}: water (mL)`, Calc.totalDaily(r, 'water', US) * 1000, ml, 0.5);
+  const e = Calc.rowRange(r[0], 'energy', US);
+  check(`per hour, ${dev} camera ${cam}: low ≤ central ≤ high`, e.low <= e.central && e.central <= e.high,
+    `${round(e.low)} · ${round(e.central)} · ${round(e.high)} Wh`);
+}
+
+// 4.4 (calls change "Your other digital use", never "Your AI use") is a page
+// property, like 3.4; checked in the browser.
+
+// 4.5 (calculation part): the cross-checks are text only — no INPUTS entry
+// uses Greenspector (17) alone or Obringer (16), so neither can reach a range.
+{
+  const usesOnly = (src) => Object.entries(D.INPUTS).filter(([, v]) => v.sources.length === 1 && v.sources[0] === src).map(([k]) => k);
+  const obringer = Object.entries(D.INPUTS).filter(([, v]) => v.sources.includes(16)).map(([k]) => k);
+  check('4.5 Obringer (source 16) is in no calculated input', obringer.length === 0, obringer.join(', ') || 'none');
+  check('4.5 Greenspector (17) is never the sole source of an input', usesOnly(17).length === 0, usesOnly(17).join(', ') || 'none');
+  check('4.5 three cross-checks declared; Obringer labelled disputed',
+    D.CALL_CROSS_CHECKS.length === 3 && /disputed upper estimate/.test(D.CALL_CROSS_CHECKS.find((c) => c.sources[0] === 16).disputed), '');
+}
+
+// 4.6: tablet and desktop add nothing to the totals.
+for (const dev of ['tablet', 'desktop']) {
+  const r = Calc.totalRange(call(dev, 'on', 3), 'carbon', US);
+  check(`4.6 ${dev}: not available, adds 0 · 0 · 0`, r.low === 0 && r.central === 0 && r.high === 0 && !!Calc.getCallDevice(dev).unavailable,
+    `reason: "${Calc.getCallDevice(dev).unavailable}"`);
+}
+
+// Streaming and calls together: the other-digital total is the sum of both.
+approx('streaming + calls: total = sum of rows (carbon)',
+  Calc.totalDaily(tv2.concat(call('laptop', 'on', 2)), 'carbon', US),
+  Calc.totalDaily(tv2, 'carbon', US) + Calc.totalDaily(call('laptop', 'on', 2), 'carbon', US), 1e-9);
+
+// --------------------------------------------------------------------------
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exitCode = failed ? 1 : 0;
