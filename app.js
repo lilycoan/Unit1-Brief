@@ -7,7 +7,7 @@
     DAILY_ITEMS, ANNUAL_ITEMS, DAYS,
     INPUTS, AGENT_SIZES, CACHE_SETTINGS, AGENT_CROSS_CHECKS,
     MEDIA_TYPES, MEDIA_TIERS, STREAMING_DEVICES, STREAMING_CROSS_CHECKS,
-    CALL_DEVICES, CALL_DATA, CALL_CROSS_CHECKS,
+    CALL_DEVICES, CALL_DATA, CALL_CROSS_CHECKS, GLOSSARY,
   } = window.FootprintData;
   const Calc = window.FootprintCalc;
 
@@ -570,8 +570,10 @@
     const ai = aiRange(state.metric);
     const other = otherRange(state.metric);
     $('totals').innerHTML = (ai.high > 0 || other.high > 0)
-      ? `<span class="range-key totals-key">low · central · high</span>${col('Your AI use', ai)}${col('Your other digital use', other)}`
+      ? `<span class="range-key totals-key">low · central · high — <strong>outer bounds</strong>: every assumption at its best or worst case at once, not a likely range</span>${col('Your AI use', ai)}${col('Your other digital use', other)}`
       : '';
+    $('outer-note').hidden = !(ai.high > 0 || other.high > 0);
+    renderDrivers();
     let compare = '';
     if (ai.central > 0 && other.central > 0) {
       const ratio = ai.central / other.central;
@@ -582,6 +584,28 @@
       compare = 'Add streaming or call hours to compare your AI use with your other digital use.';
     }
     $('totals-compare').textContent = compare;
+  }
+
+  // What drives each total's range (spec feature 5): the top three inputs by
+  // swing in the selected metric, with the energy swing where there is one.
+  function renderDrivers() {
+    const grid = getLoc().grid;
+    const list = (title, rows) => {
+      const ds = Calc.drivers(rows, state.metric, grid, 3);
+      if (!ds.length) return '';
+      return `<div class="drivers-col"><span class="range-title">What drives ${title}</span><ol>` +
+        ds.map((d) => `<li><strong>${d.label}</strong>: a swing of ${fmtMetric(d.swing)}` +
+          (d.energySwing > 1e-9 ? ` (${fmtMetric(d.energySwing, 'energy')})` : '') +
+          ` from its low to its high — ${d.why} (${srcText(d.sources)}).</li>`).join('') +
+        '</ol></div>';
+    };
+    $('drivers').innerHTML = list('your AI use range', aiRows()) + list('your other digital use range', otherRows());
+  }
+
+  // Glossary (spec feature 5), opened from the results and the method panel.
+  function renderGlossary() {
+    $('glossary-list').innerHTML = GLOSSARY.map((g) =>
+      `<dt>${g.term}</dt><dd>${g.def}${g.sources.length ? ` <span class="range-key">(${srcText(g.sources)})</span>` : ''}</dd>`).join('');
   }
 
   const SERIES = ['var(--series-1)', 'var(--series-2)', 'var(--series-3)', 'var(--series-4)', 'var(--series-5)', 'var(--series-6)'];
@@ -711,6 +735,10 @@
   ['device', 'camera'].forEach((k) => {
     $(`call-${k}`).addEventListener('change', (e) => { state.calls[k] = e.target.value; state.persona = null; render(); saveToUrl(); });
   });
+  document.querySelectorAll('.glossary-open').forEach((b) => b.addEventListener('click', () => {
+    $('glossary').open = true;
+    $('glossary').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }));
   $('addmedia').addEventListener('click', () => {
     state.media.push(newMediaRow('image'));
     state.persona = null;
@@ -731,6 +759,7 @@
   });
 
   loadFromUrl();
+  renderGlossary();
   render();
 
   // ==========================================================================

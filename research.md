@@ -348,6 +348,22 @@ For each source, record:
 - Checked directly: **not verified.** The page returned 403, and Europe PMC has no record.
 - Confidence/decision: **reject until verified.** It would support the assumption about employee skepticism toward company sustainability messaging.
 
+### Glossary definitions
+
+> **Added during implementation (step 6, 2026-09-21), pending user review.** The user chose to find and verify sources for the two glossary terms that had none in this file.
+
+**27. IPCC, 2021: Annex VII: Glossary [Matthews, J.B.R., et al. (eds.)]. In *Climate Change 2021: The Physical Science Basis*, Working Group I contribution to the Sixth Assessment Report, pp. 2215–2256. doi:10.1017/9781009157896.022. https://www.ipcc.ch/report/ar6/wg1/downloads/report/IPCC_AR6_WGI_AnnexVII.pdf**
+- Claim/figures: "CO2 equivalent (CO2-eq) emission": "The amount of carbon dioxide (CO2) emission that would have an equivalent effect on a specified key measure of climate change, over a specified time horizon, as an emitted amount of another greenhouse gas (GHG) or a mixture of other GHGs." It adds that CO₂-equivalent emissions "should not be taken to imply that these emissions have an equivalent effect across all key measures of climate change."
+- Checked directly: the PDF, downloaded and read via `pdftotext` (the fetch tool got HTTP 403). The citation line above is the annex's own "should be cited as" text.
+- Limitations: none for a definition. EPA pages checked (Understanding Global Warming Potentials; Greenhouse Gas Equivalencies Calculator references) use CO₂e but give no standalone definition, so they were not used.
+- Confidence/decision: **use** for the glossary definition of g CO₂e.
+
+**28. Water Footprint Network, "Glossary." https://www.waterfootprint.org/water-footprint-2/glossary/**
+- Claim/figures: blue water: "Fresh surface and groundwater, in other words, the water in freshwater lakes, rivers and aquifers." Blue water footprint: "Volume of surface and groundwater consumed as a result of the production of a good or service."
+- Checked directly: the glossary page via fetch.
+- Limitations: an NGO glossary, not peer-reviewed; the definitions are standard in water-footprint accounting. The original calculator already names the Water Footprint Network among its sources.
+- Confidence/decision: **use** for the glossary definition of blue water.
+
 ## Selected features
 
 List the five selected features. Briefly explain why each was selected and how the set serves all three reference profiles. Name a few serious alternatives and explain why they were rejected.

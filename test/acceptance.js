@@ -416,5 +416,85 @@ approx('streaming + calls: total = sum of rows (carbon)',
   Calc.totalDaily(tv2, 'carbon', US) + Calc.totalDaily(call('laptop', 'on', 2), 'carbon', US), 1e-9);
 
 // --------------------------------------------------------------------------
+section('Feature 5: ranges and drivers (spec 5.1–5.7)');
+// --------------------------------------------------------------------------
+
+// 5.1: worked example AI total 76.3 · 192.6 · 1,195 g (checked above) and
+// drivers in the order cache-read setting, provider factor, PUE.
+{
+  const d = Calc.drivers(heavy1, 'carbon', US);
+  check('5.1 AI drivers in order: cache-read, provider factor, PUE',
+    d.map((x) => x.id).join(',') === 'cacheRead,providerFactor,pue',
+    d.map((x) => `${x.label} ${round(x.energySwing)} Wh`).join(' · '));
+  check('5.1 each driver names its source and reason', d.every((x) => x.sources.length > 0 && x.why.length > 0), '');
+}
+// 5.2: other-digital total 44.0 · 73.4 · 94.9 g (checked above); drivers TV
+// power, then network.
+{
+  const d = Calc.drivers(tv2, 'carbon', US);
+  check('5.2 other-digital drivers: TV power, then network', d.map((x) => x.id).slice(0, 2).join(',') === 'tvPower,streamNetwork',
+    d.map((x) => `${x.label} ${round(x.energySwing)} Wh`).join(' · '));
+}
+
+// 5.3: every row's low ≤ central ≤ high, and each total equals the sums of its
+// rows — for a mixed set with every row type.
+{
+  const ai = rows('gpt-5.5:chat:5').concat(heavy1, light1, [video10, images10]);
+  const other = tv2.concat([{ device: 'phone', hours: 1 }], call('laptop', 'on', 2));
+  for (const [name, set] of [['AI', ai], ['other digital', other]]) {
+    for (const metric of ['carbon', 'water']) {
+      const ranges = set.map((r) => Calc.rowRange(r, metric, US));
+      const total = Calc.totalRange(set, metric, US);
+      const ordered = ranges.every((r) => r.low <= r.central && r.central <= r.high);
+      const sums = Calc.LEVELS.every((l) => Math.abs(total[l] - ranges.reduce((s, r) => s + r[l], 0)) < 1e-9);
+      check(`5.3 ${name} (${set.length} rows, ${metric}): rows ordered, total = sum of rows`, ordered && sums,
+        `${round(total.low)} · ${round(total.central)} · ${round(total.high)}`);
+    }
+  }
+}
+
+// 5.4: the driver list depends on the metric — water adds the water factors.
+{
+  const c = Calc.drivers(tv2, 'carbon', US).map((x) => x.id);
+  const w = Calc.drivers(tv2, 'water', US).map((x) => x.id);
+  check('5.4 carbon and water driver lists differ', c.join(',') !== w.join(','), `carbon: ${c.join(', ')} | water: ${w.join(', ')}`);
+}
+
+// 5.5: yearly = daily × 365 for each level (the page multiplies by DAYS).
+check('5.5 a year is 365 days', D.DAYS === 365, `DAYS = ${D.DAYS}`);
+
+// 5.6: all inputs at zero → totals 0 and no drivers.
+{
+  const zeroAI = [{ model: 'gpt-5.5', size: 'chat', count: 0 }, { model: 'gpt-5.5', size: 'agent-heavy', count: 0 }, { type: 'video', tier: 'mid', amount: 0 }];
+  const zeroOther = D.STREAMING_DEVICES.map((d) => ({ device: d.id, hours: 0 })).concat(call('laptop', 'on', 0));
+  for (const [name, set] of [['AI', zeroAI], ['other digital', zeroOther]]) {
+    const t = Calc.totalRange(set, 'carbon', US);
+    check(`5.6 ${name} all zero → 0 · 0 · 0 and no drivers`,
+      t.low === 0 && t.central === 0 && t.high === 0 && Calc.drivers(set, 'carbon', US).length === 0, '');
+  }
+}
+
+// Shared inputs move once across every row that uses them: PUE's swing for
+// agent + media together equals the sum of its swings for each alone.
+{
+  const swing = (set) => Calc.totalDaily(set, 'energy', US, { vary: 'pue', varyLevel: 'high' }) - Calc.totalDaily(set, 'energy', US, { vary: 'pue', varyLevel: 'low' });
+  approx('shared input: PUE swing across agent + media rows = sum of parts',
+    swing(heavy1.concat([video10])), swing(heavy1) + swing([video10]), 1e-9);
+}
+
+// 5.7: every spec glossary term is defined; factual definitions cite a source.
+{
+  const specTerms = ['g CO₂e', 'Wh and kWh', 'mL and L', 'Blue water', 'On-site and off-site water', 'PUE',
+    'Grid intensity', 'Tokens and cache reads', 'EcoLogits', 'Derived estimate', 'Borrowed range', 'Outer bounds'];
+  const noSourceNeeded = ['Wh and kWh', 'mL and L', 'Derived estimate', 'Borrowed range', 'Outer bounds']; // units and project terms
+  for (const term of specTerms) {
+    const g = D.GLOSSARY.find((x) => x.term === term);
+    const needs = !noSourceNeeded.includes(term);
+    check(`5.7 glossary: "${term}" defined${needs ? ' with a source' : ''}`,
+      !!g && g.def.length > 20 && (!needs || g.sources.length > 0), g ? (g.sources.length ? `sources ${g.sources.join(', ')}` : 'no source (unit or project term)') : 'missing');
+  }
+}
+
+// --------------------------------------------------------------------------
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exitCode = failed ? 1 : 0;

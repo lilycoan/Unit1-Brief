@@ -210,6 +210,34 @@
     return rangeOf((sc) => totalDaily(rows, metric, grid, sc));
   }
 
+  // --------------------------------------------------------------------------
+  // What drives the range (spec feature 5). Each uncertain input is moved from
+  // its low to its high with everything else central; the change in the total
+  // is its swing. Shared inputs move in every row that uses them at once,
+  // because each is declared once. Grid intensity is not an input, so it is
+  // never varied.
+  // --------------------------------------------------------------------------
+  const DRIVER_IDS = [ECOLOGITS].concat(Object.keys(D.INPUTS));
+  const driverInfo = (id) => (id === ECOLOGITS ? D.ECOLOGITS_INPUT : D.INPUTS[id]);
+  function swingOf(rows, id, metric, grid) {
+    return totalDaily(rows, metric, grid, { vary: id, varyLevel: 'high' }) -
+      totalDaily(rows, metric, grid, { vary: id, varyLevel: 'low' });
+  }
+  // The top `n` inputs by swing in `metric`, largest first. Each entry has the
+  // swing in the metric's units and in Wh (0 for inputs, like water factors,
+  // that don't change energy). Inputs with no effect are left out.
+  function drivers(rows, metric, grid, n) {
+    return DRIVER_IDS
+      .map((id) => {
+        const info = driverInfo(id);
+        return { id, label: info.label, sources: info.sources, why: info.why,
+          swing: swingOf(rows, id, metric, grid), energySwing: swingOf(rows, id, 'energy', grid) };
+      })
+      .filter((d) => d.swing > 1e-12)
+      .sort((a, b) => b.swing - a.swing)
+      .slice(0, n || 3);
+  }
+
   // Donut label for any AI row.
   function rowLabel(r) {
     if (isMediaRow(r)) {
@@ -250,7 +278,7 @@
     getModel, getLocation, isTextSize, isAgentSize, getAgentSize, isMediaRow, getMediaTier,
     isStreamingRow, getStreamingDevice, isCallRow, getCallDevice,
     perPrompt, agentTokens, agentSessionWh, mediaWh, streamingHourParts, callHourParts,
-    rowValue, rowRange, projectRange, totalDaily, totalRange,
+    rowValue, rowRange, projectRange, totalDaily, totalRange, drivers,
     rowShares, dailyFootprint, itemDaily, itemAnnual,
   };
 });

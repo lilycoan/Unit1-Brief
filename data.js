@@ -384,6 +384,48 @@
     { label: 'Hausfather, median session', wh: 600, range: [250, 1200], sources: [13] },
   ];
 
+  // ==========================================================================
+  // Driver list (spec feature 5). Text rows' EcoLogits min/max values move
+  // together as one driver input (plan.md, "Text-row drivers", user's choice
+  // A); it is described here because it isn't an INPUTS entry.
+  // ==========================================================================
+  const ECOLOGITS_INPUT = {
+    label: 'EcoLogits model range',
+    sources: [4],
+    why: 'each text row’s energy, carbon, and water is an estimated range from the EcoLogits method, not a provider’s measurement',
+  };
+
+  // ==========================================================================
+  // Glossary (spec feature 5). Factual definitions cite research.md sources;
+  // units and the project's own terms have none.
+  // ==========================================================================
+  const GLOSSARY = [
+    { term: 'g CO₂e', sources: [27],
+      def: 'Grams of carbon dioxide equivalent: the amount of CO₂ that would have the same effect on a chosen measure of climate change, over a set time horizon, as the greenhouse gases actually emitted. It lets different gases be added into one number, though their effects are not identical in every way.' },
+    { term: 'Wh and kWh', sources: [],
+      def: 'Watt-hours, a unit of energy. A 1-watt device running for one hour uses 1 Wh; 1 kWh is 1,000 Wh.' },
+    { term: 'mL and L', sources: [],
+      def: 'Millilitres and litres. 1 L is 1,000 mL.' },
+    { term: 'Blue water', sources: [28, 4],
+      def: 'Fresh surface water and groundwater: the water in lakes, rivers, and aquifers. This calculator counts blue water consumed, following EcoLogits.' },
+    { term: 'On-site and off-site water', sources: [4, 5],
+      def: 'On-site water cools the data centre itself. Off-site water is used at power plants to make the electricity the data centre runs on. Most of this calculator’s water is off-site.' },
+    { term: 'PUE', sources: [4, 14],
+      def: 'Power usage effectiveness: a data centre’s total energy divided by the energy its computers use. A PUE of 1.10 means 10% extra for cooling and other overhead.' },
+    { term: 'Grid intensity', sources: [14],
+      def: 'How much CO₂e is emitted for each kWh of electricity on a region’s grid. It varies more than fivefold across US regions. This calculator uses the location you choose and does not vary it.' },
+    { term: 'Tokens and cache reads', sources: [14, 13],
+      def: 'Tokens are the pieces of text a language model reads (input) and writes (output); energy estimates are often given per token. A cache read reuses input the model has already processed in the same session, which costs less. How much less is estimated from prices, not measured.' },
+    { term: 'EcoLogits', sources: [4],
+      def: 'An open-source method and library that estimates the energy, carbon, and water of AI model requests. The text rows in this calculator use its figures (version 0.10).' },
+    { term: 'Derived estimate', sources: [],
+      def: 'A number this project calculated from other sources’ figures, rather than one a source measured or reported directly.' },
+    { term: 'Borrowed range', sources: [],
+      def: 'Where a value has no sourced range, the laptop’s measured spread (0.6× to 1.47× of its central value) is applied to it as a stand-in.' },
+    { term: 'Outer bounds', sources: [],
+      def: 'The low and high totals put every assumption at its best or worst case at once. That is wider than a statistical range, so it is not a likely range.' },
+  ];
+
   const GAL_TO_L = 3.785411784;
   const DAYS = 365;
 
@@ -392,7 +434,7 @@
     DAILY_ITEMS, ANNUAL_ITEMS, GAL_TO_L, DAYS,
     INPUTS, AGENT_TOKEN_MIX, AGENT_SIZES, CACHE_SETTINGS, AGENT_CROSS_CHECKS,
     MEDIA_TYPES, MEDIA_TIERS, STREAMING_DEVICES, STREAMING_CROSS_CHECKS,
-    CALL_DEVICES, CALL_DATA, CALL_CROSS_CHECKS,
+    CALL_DEVICES, CALL_DATA, CALL_CROSS_CHECKS, ECOLOGITS_INPUT, GLOSSARY,
   };
   if (typeof module === 'object' && module.exports) module.exports = FootprintData;
   else root.FootprintData = FootprintData;

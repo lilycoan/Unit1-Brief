@@ -228,6 +228,19 @@ a { color: var(--terracotta); }
 .range-empty { color: var(--text-soft); font-style: italic; }
 .totals-compare { margin: 0 0 16px; font-size: 0.85rem; color: var(--text-soft); }
 .totals-compare:empty { display: none; }
+/* Outer-bounds note and driver lists under the totals */
+.totals-key strong { color: var(--text); font-weight: 600; }
+.outer-note { margin: -8px 0 12px; font-size: 0.8rem; color: var(--text-soft); line-height: 1.45; }
+.outer-note[hidden] { display: none; }
+.drivers { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; font-size: 0.82rem; line-height: 1.45; }
+.drivers:empty { display: none; }
+.drivers ol { margin: 4px 0 0; padding-left: 1.3em; display: flex; flex-direction: column; gap: 4px; }
+.drivers strong { font-weight: 600; }
+/* Glossary */
+.glossary { margin: 0; display: grid; grid-template-columns: minmax(8em, max-content) 1fr; gap: 8px 16px; font-size: 0.88rem; }
+.glossary dt { font-weight: 600; }
+.glossary dd { margin: 0; line-height: 1.45; }
+@media (max-width: 560px) { .glossary { grid-template-columns: 1fr; gap: 2px; } .glossary dd { margin-bottom: 8px; } }
 @media (max-width: 420px) { .totals { grid-template-columns: 1fr; } }
 .range-title { font-weight: 600; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-soft); }
 .range-title .range-key { text-transform: none; letter-spacing: 0; font-weight: 400; }

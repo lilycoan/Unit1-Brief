@@ -78,7 +78,9 @@ Ranges come first, so each feature is built range-aware and needs no rework. Age
 - **Video calls (step 5).** One set of call inputs (hours, device, camera), not rows, matching the spec. Laptop call power reuses the streaming `laptopPower` input (same values and sources), so in step 6 moving "laptop power" moves streaming and calls together. A per-hour central breakdown (device · network · server) and the other camera setting's result are shown, which is how 4.2's "the device dominates" appears. Shared in the link as `c=hours:device:camera`.
 - **Greenspector ratio (step 5), settled 2026-09-21 (user chose the live ratio).** The ratio depends on the grid (about 14× US, 43× UK), so the page computes it for the chosen grid. `spec.md` feature 4 wording updated and recorded under its Revisions.
 - **Feature 4 limitations still to place (step 8).** Shown on the page now: no laptop call measurement, estimates differ by up to about 50×, device manufacturing excluded, the server proxy, and borrowed ranges. Still to go in the method panel: the phone is one low-end 2021 model, the 3.85 V battery voltage is our assumption, camera-off was measured with the screen off, and both Mytton and Guennebaud caution against per-GB figures.
-- **Sources pending user review.** Research entries 1, 13, 24, and 26, added during specification, are still marked pending. This doesn't block the build, but it is part of verification.
+- **Drivers and glossary (step 6).** Each driver shows its swing in the selected metric plus its energy swing, e.g. "Cache-read cost: a swing of 308 g CO₂e (811 Wh) from its low to its high". The spec's example writes "±811 Wh", but 811 Wh is the full low-to-high change, not a ± half-width, so the page says "swing … from its low to its high". The glossary opens from buttons in the results card and the method panel (not `#` links, which would overwrite the share-link hash).
+- **Glossary sources (step 6), settled 2026-09-21 (user chose to find and verify).** "g CO₂e" cites the IPCC AR6 WG1 glossary (new research entry 27, read in the PDF); "blue water" cites the Water Footprint Network glossary (new entry 28). EPA pages checked had no standalone CO₂e definition. Units and the project's own terms have no source.
+- **Sources pending user review.** Research entries 1, 13, 24, and 26, added during specification, and 27 and 28, added in step 6, are still marked pending. This doesn't block the build, but it is part of verification.
 
 ## Checklist
 
@@ -134,10 +136,10 @@ Replace or expand the implementation placeholders below with tasks specific to t
 - [ ] Checkpoint: acceptance checks 4.1–4.6 pass
 
 **Step 6: Drivers, outer bounds, and glossary (rest of feature 5)**
-- [ ] Treat all text rows' EcoLogits ranges as one driver input, "EcoLogits model range" (user's choice A)
-- [ ] Compute the swings for each total and the selected metric; list the top three with input, swing, source, and reason
-- [ ] Add the "outer bounds" label and method note to both totals
-- [ ] Add the glossary (all terms listed in the spec, with sources for factual definitions), reachable from the results and the method panel
+- [x] Treat all text rows' EcoLogits ranges as one driver input, "EcoLogits model range" (user's choice A)
+- [x] Compute the swings for each total and the selected metric; list the top three with input, swing, source, and reason
+- [x] Add the "outer bounds" label and method note to both totals
+- [x] Add the glossary (all terms listed in the spec, with sources for factual definitions), reachable from the results and the method panel
 - [ ] Checkpoint: acceptance checks 5.1–5.7 pass, including the worked example
 
 **Step 7: Whole calculator**
