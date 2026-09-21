@@ -17,7 +17,7 @@ let failed = 0;
 // Numeric check: |actual − expected| ≤ tol.
 function approx(name, actual, expected, tol) {
   const ok = Number.isFinite(actual) && Math.abs(actual - expected) <= tol;
-  report(name, ok, `got ${round(actual)}, expected ${expected} ± ${tol}`);
+  report(name, ok, `got ${round(actual)}, expected ${round(expected)} ± ${tol}`);
 }
 // Boolean check with a short explanation of what was compared.
 function check(name, ok, detail) { report(name, ok, detail || ''); }
@@ -73,6 +73,69 @@ for (const [r, loc, carbon, cTol, water, wTol] of BASELINE) {
 approx('typical daily footprint, US defaults (g)',
   Calc.dailyFootprint({ loc: 'us', home: 'med', drive: 'davg', diet: 'avg', fly: 'some' }, 'carbon'),
   16100 * 1000 / 365, 1e-6);
+
+// --------------------------------------------------------------------------
+section('Step 1 range core: text rows use EcoLogits min/max');
+// --------------------------------------------------------------------------
+
+// Hand calculation for 5 GPT-5.5 chatbot replies on the US grid from the raw
+// EcoLogits fields (whmin 1.7417 / whmax 3.5784; emb 0.0692 has no range;
+// mlmin 6.2811 / mlmax 12.9047):
+//   low carbon  = 5 × (1.7417 / 1000 × 380 + 0.0692) = 3.655230 g
+//   high carbon = 5 × (3.5784 / 1000 × 380 + 0.0692) = 7.144960 g
+const chat5 = rows('gpt-5.5:chat:5');
+const chat5Carbon = Calc.aiRange(chat5, 'carbon', US);
+const chat5Water = Calc.aiRange(chat5, 'water', US);
+approx('5 GPT-5.5 chatbot replies, low carbon (g)', chat5Carbon.low, 3.655230, 1e-6);
+approx('5 GPT-5.5 chatbot replies, central carbon (g)', chat5Carbon.central, 5.40019, 1e-6);
+approx('5 GPT-5.5 chatbot replies, high carbon (g)', chat5Carbon.high, 7.144960, 1e-6);
+approx('5 GPT-5.5 chatbot replies, low water (L)', chat5Water.low, 5 * 6.2811 / 1000, 1e-9);
+approx('5 GPT-5.5 chatbot replies, high water (L)', chat5Water.high, 5 * 12.9047 / 1000, 1e-9);
+
+// Spec 5.3 (text-row part): every row's low ≤ central ≤ high — checked for
+// every model × reply length × metric × location.
+{
+  let n = 0;
+  const bad = [];
+  for (const m of D.MODELS) for (const size of Object.keys(m.sizes)) for (const metric of ['carbon', 'water']) {
+    for (const loc of D.LOCATIONS) {
+      const r = Calc.textRowRange({ model: m.id, size, count: 1 }, metric, loc.grid);
+      n++;
+      if (!(r.low <= r.central && r.central <= r.high)) bad.push(`${m.id}/${size}/${metric}/${loc.id}`);
+    }
+  }
+  check(`low ≤ central ≤ high for all ${n} text-row combinations`, bad.length === 0, bad.length ? 'violations: ' + bad.join(', ') : `${n} checked`);
+}
+
+// Spec 5.3 (text-row part): the total's low, central, and high each equal the
+// sums of its rows' values. Uses the "Daily researcher" preset's three rows.
+{
+  const rs = rows('gpt-5.5:report:2,claude-opus-4-8:long:1,gpt-5.5:chat:10');
+  for (const metric of ['carbon', 'water']) {
+    const total = Calc.aiRange(rs, metric, US);
+    for (const lvl of ['low', 'central', 'high']) {
+      const sum = rs.reduce((s, r) => s + Calc.textRowRange(r, metric, US)[lvl], 0);
+      approx(`researcher preset ${metric} total ${lvl} = sum of rows`, total[lvl], sum, 1e-9);
+    }
+  }
+}
+
+// Spec 5.5 (text-row part): yearly range = daily range × 365.
+approx('yearly high = daily high × 365 (5 chatbot replies, carbon)', Calc.aiRange(chat5, 'carbon', US).high * D.DAYS, 7.144960 * 365, 1e-4);
+
+// Driver scenario: moving only the EcoLogits input to high equals all-high
+// for text-only use (it is the only uncertain input so far); moving an input
+// that text rows don't use leaves them central.
+approx('text rows: vary EcoLogits → high equals all-high',
+  Calc.aiDaily(chat5, 'carbon', US, { vary: Calc.ECOLOGITS, varyLevel: 'high' }), chat5Carbon.high, 1e-9);
+approx('text rows: vary an unrelated input → stays central',
+  Calc.aiDaily(chat5, 'carbon', US, { vary: 'pue', varyLevel: 'high' }), chat5Carbon.central, 1e-9);
+
+// Spec 5.6 (text-row part): zero counts give a zero range.
+{
+  const z = Calc.aiRange(rows('gpt-5.5:chat:0'), 'carbon', US);
+  check('zero prompts → 0 · 0 · 0', z.low === 0 && z.central === 0 && z.high === 0, `${z.low} · ${z.central} · ${z.high}`);
+}
 
 // --------------------------------------------------------------------------
 console.log(`\n${passed} passed, ${failed} failed`);

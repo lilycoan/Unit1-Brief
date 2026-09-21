@@ -13,23 +13,68 @@
   const getModel = (id) => D.MODELS.find((m) => m.id === id) || D.MODELS[0];
   const getLocation = (id) => D.LOCATIONS.find((x) => x.id === id) || D.LOCATIONS[0];
 
-  // One prompt of `size` on `model`. grid is g CO2e/kWh for the chosen location.
-  function perPrompt(model, size, metric, grid) {
-    const s = model.sizes[size];
-    if (metric === 'carbon') return (s.wh / 1000) * grid + s.emb; // grams
-    return s.ml / 1000; // liters
+  // --------------------------------------------------------------------------
+  // Scenarios (spec feature 5). Every uncertain input has a low, central, and
+  // high value. A scenario says which one to use for each input:
+  //   { base: 'low' | 'central' | 'high' }       — every input at that level
+  //   { vary: inputId, varyLevel: 'low'|'high' } — one input moved, rest central
+  // Row and total ranges use the first form; the driver list uses the second.
+  // --------------------------------------------------------------------------
+  const SCENARIOS = {
+    low: { base: 'low' },
+    central: { base: 'central' },
+    high: { base: 'high' },
+  };
+  function levelFor(scenario, inputId) {
+    if (scenario.vary) return scenario.vary === inputId ? scenario.varyLevel : 'central';
+    return scenario.base;
   }
 
-  // rows: [{ model, size, count }]
-  function aiDaily(rows, metric, grid) {
-    let total = 0;
-    for (const r of rows) {
-      if (!r.count) continue;
-      const m = getModel(r.model);
-      if (!m.sizes[r.size]) continue;
-      total += r.count * perPrompt(m, r.size, metric, grid);
-    }
-    return total;
+  // Driver input id for text rows: all EcoLogits min/max values move together
+  // (plan.md, "Text-row drivers", user's choice A).
+  const ECOLOGITS = 'ecologits';
+  // Which EcoLogits fields hold each level's value.
+  const ECOLOGITS_FIELDS = {
+    low: { wh: 'whmin', emb: 'embmin', ml: 'mlmin' },
+    central: { wh: 'wh', emb: 'emb', ml: 'ml' },
+    high: { wh: 'whmax', emb: 'embmax', ml: 'mlmax' },
+  };
+
+  // One prompt of `size` on `model`. grid is g CO2e/kWh for the chosen location.
+  // level picks the EcoLogits mean ('central') or its 95% range ends.
+  function perPrompt(model, size, metric, grid, level) {
+    const s = model.sizes[size];
+    const f = ECOLOGITS_FIELDS[level || 'central'];
+    if (metric === 'carbon') return (s[f.wh] / 1000) * grid + s[f.emb]; // grams
+    return s[f.ml] / 1000; // liters
+  }
+
+  // One text row per day under a scenario. rows: [{ model, size, count }]
+  function textRowValue(row, metric, grid, scenario) {
+    if (!row.count) return 0;
+    const m = getModel(row.model);
+    if (!m.sizes[row.size]) return 0;
+    return row.count * perPrompt(m, row.size, metric, grid, levelFor(scenario || SCENARIOS.central, ECOLOGITS));
+  }
+  function textRowRange(row, metric, grid) {
+    return {
+      low: textRowValue(row, metric, grid, SCENARIOS.low),
+      central: textRowValue(row, metric, grid, SCENARIOS.central),
+      high: textRowValue(row, metric, grid, SCENARIOS.high),
+    };
+  }
+
+  // Daily AI total under a scenario (central if omitted).
+  function aiDaily(rows, metric, grid, scenario) {
+    return rows.reduce((sum, r) => sum + textRowValue(r, metric, grid, scenario), 0);
+  }
+  // Daily AI total as { low, central, high }: each is the sum of the rows' values.
+  function aiRange(rows, metric, grid) {
+    return {
+      low: aiDaily(rows, metric, grid, SCENARIOS.low),
+      central: aiDaily(rows, metric, grid, SCENARIOS.central),
+      high: aiDaily(rows, metric, grid, SCENARIOS.high),
+    };
   }
 
   // Per-row values for the donut, largest first.
@@ -60,5 +105,9 @@
   function itemDaily(item, metric) { return metric === 'carbon' ? item.c * 1000 : item.w * D.GAL_TO_L; }
   function itemAnnual(item, metric) { return metric === 'carbon' ? item.c * 1000 : item.w * D.GAL_TO_L; }
 
-  return { getModel, getLocation, perPrompt, aiDaily, rowShares, dailyFootprint, itemDaily, itemAnnual };
+  return {
+    SCENARIOS, ECOLOGITS, levelFor,
+    getModel, getLocation, perPrompt, textRowValue, textRowRange, aiDaily, aiRange,
+    rowShares, dailyFootprint, itemDaily, itemAnnual,
+  };
 });

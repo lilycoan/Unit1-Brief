@@ -71,6 +71,8 @@
   // ==========================================================================
   const getLoc = () => Calc.getLocation(state.loc);
   const aiDaily = (metric) => Calc.aiDaily(state.rows, metric, getLoc().grid);
+  const aiRange = (metric) => Calc.aiRange(state.rows, metric, getLoc().grid);
+  const rowRange = (row, metric) => Calc.textRowRange(row, metric, getLoc().grid);
   const rowShares = (metric) => Calc.rowShares(state.rows, metric, getLoc().grid);
   const dailyFootprint = (metric) => Calc.dailyFootprint(state, metric);
   const itemDaily = Calc.itemDaily;
@@ -88,16 +90,26 @@
     if (a >= 0.1) return String(Math.round(n * 100) / 100);
     return String(Number(n.toPrecision(2)));
   }
-  function fmtCarbon(g) {
-    if (g >= 1e6) return sig(g / 1e6) + ' t CO₂e';
-    if (g >= 1000) return sig(g / 1000) + ' kg CO₂e';
-    return sig(g) + ' g CO₂e';
+  // Display unit for a value (g carbon or L water), chosen by its size.
+  function unitFor(v, metric) {
+    if (metric === 'carbon') {
+      if (v >= 1e6) return { unit: 't CO₂e', conv: (x) => x / 1e6 };
+      if (v >= 1000) return { unit: 'kg CO₂e', conv: (x) => x / 1000 };
+      return { unit: 'g CO₂e', conv: (x) => x };
+    }
+    if (v >= 1) return { unit: 'L', conv: (x) => x };
+    return { unit: 'mL', conv: (x) => x * 1000 };
   }
-  function fmtWater(l) {
-    if (l >= 1) return sig(l) + ' L';
-    return sig(l * 1000) + ' mL';
+  function fmtMetric(v) {
+    const u = unitFor(v, state.metric);
+    return sig(u.conv(v)) + ' ' + u.unit;
   }
-  const fmtMetric = (v) => (state.metric === 'carbon' ? fmtCarbon(v) : fmtWater(v));
+  // "low · central · high unit" — all three in the unit that fits the high end,
+  // so the numbers can be compared at a glance.
+  function fmtRange(r) {
+    const u = unitFor(r.high, state.metric);
+    return [r.low, r.central, r.high].map((v) => sig(u.conv(v))).join(' · ') + ' ' + u.unit;
+  }
 
   // ==========================================================================
   // Render
@@ -140,6 +152,10 @@
       modelSel.value = row.model;
       sizeSel.value = row.size;
       countInput.value = row.count;
+      // Per-day range for this row in the selected metric; the first row also
+      // says which number is which.
+      node.querySelector('.row-range').innerHTML = fmtRange(rowRange(row, state.metric)) +
+        (row === state.rows[0] ? ' <span class="range-key">low · central · high, per day</span>' : '');
 
       modelSel.addEventListener('change', () => { row.model = modelSel.value; state.persona = null; render(); saveToUrl(); });
       sizeSel.addEventListener('change', () => { row.size = sizeSel.value; state.persona = null; render(); saveToUrl(); });
@@ -182,6 +198,18 @@
     $('verdict').innerHTML = daily > 0
       ? `Your day of AI use ≈ <strong>${fmtMetric(daily)}</strong> — ${cmpText}${pctText ? ', ' + pctText : ''}.`
       : `Add a row to see your footprint.`;
+    renderAiRange();
+  }
+
+  // "Your AI use" total as low · central · high, per day and per year.
+  function renderAiRange() {
+    const day = aiRange(state.metric);
+    const year = { low: day.low * DAYS, central: day.central * DAYS, high: day.high * DAYS };
+    $('ai-range').innerHTML = day.high > 0
+      ? `<span class="range-title">Range <span class="range-key">low · central · high</span></span>
+         <span class="range-line"><span class="range-period">per day</span> ${fmtRange(day)}</span>
+         <span class="range-line"><span class="range-period">per year</span> ${fmtRange(year)}</span>`
+      : '';
   }
 
   const SERIES = ['var(--series-1)', 'var(--series-2)', 'var(--series-3)', 'var(--series-4)', 'var(--series-5)', 'var(--series-6)'];

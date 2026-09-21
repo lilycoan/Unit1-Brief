@@ -73,21 +73,25 @@
 
     <section class="panel panel-out" aria-label="How it compares">
       <div class="verdict" id="verdict"></div>
+      <div class="ai-range" id="ai-range"></div>
       <div class="donut-wrap">
         <div class="donut" id="donut"></div>
         <ul class="donut-legend" id="donut-legend"></ul>
       </div>
+      <p class="chart-note">Chart shows each row’s share of the central estimate.</p>
     </section>
   </main>
 
   <section class="chart-section" aria-label="A day of your AI use vs everyday things">
     <h2>A day of your AI use, next to everyday things</h2>
+    <p class="chart-note">Your AI use is shown at its central estimate.</p>
     <div class="hbars" id="daily-bars"></div>
   </section>
 
   <section class="chart-section split" aria-label="A year of AI use, next to bigger choices">
     <div class="split-col">
       <h2 id="add-title">In a year, things that add this much</h2>
+      <p class="chart-note">Your year of AI use is shown at its central estimate.</p>
       <div class="hbars hbars--compact" id="add-bars"></div>
     </div>
     <div class="split-col">
@@ -136,6 +140,7 @@
     <select class="row-size"></select>
     <input type="number" class="row-count" min="0" step="1" inputmode="numeric">
     <button type="button" class="row-remove" aria-label="Remove row">×</button>
+    <div class="row-range"></div>
   </div>
 </template>
 

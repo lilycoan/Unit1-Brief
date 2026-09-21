@@ -69,6 +69,8 @@ Ranges come first, so each feature is built range-aware and needs no rework. Age
   | Robin | 2 GPT-5.5 chatbot replies | Calls 4 h on a laptop, camera on · TV 2 h · phone 1 h | US |
 
   Existing presets: "Software engineer" moves from 3 old Sonnet agent sessions to 3 light sessions; "AI power user" moves from 2 old Opus agent sessions to 2 heavy sessions. The other existing presets are unchanged.
+- **Range layout (step 1), settled 2026-09-21 (user chose option 1).** Each row shows its per-day range on a small line under its inputs; the "Your AI use" daily and yearly range sits under the verdict sentence. All three numbers in a range share one unit.
+- **Embodied carbon has no range in 48 of 72 EcoLogits entries (found in step 1).** For those, `embmin` = `emb` = `embmax`, so only the energy part of a text row's carbon varies. To be stated in the method panel (step 8).
 - **Sources pending user review.** Research entries 1, 13, 24, and 26, added during specification, are still marked pending. This doesn't block the build, but it is part of verification.
 
 ## Checklist
@@ -91,9 +93,9 @@ Replace or expand the implementation placeholders below with tasks specific to t
 - [ ] Checkpoint: the page renders and calculates as before (screenshot comparison); the script runs
 
 **Step 1: Range core**
-- [ ] Add the scenario-based calculation (all low / central / high, plus one named input moved) to `calc.js`
-- [ ] Text rows return low · central · high from EcoLogits `whmin`/`whmax`, `embmin`/`embmax`, and `mlmin`/`mlmax`
-- [ ] Show each row's range and the "Your AI use" daily and yearly range; label the donut and bars "central estimate"
+- [x] Add the scenario-based calculation (all low / central / high, plus one named input moved) to `calc.js`
+- [x] Text rows return low · central · high from EcoLogits `whmin`/`whmax`, `embmin`/`embmax`, and `mlmin`/`mlmax`
+- [x] Show each row's range and the "Your AI use" daily and yearly range; label the donut and bars "central estimate"
 - [ ] Checkpoint: the text rows show ranges, and low ≤ central ≤ high holds
 
 **Step 2: Agent sessions (feature 2)**

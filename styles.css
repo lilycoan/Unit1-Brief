@@ -158,6 +158,9 @@ a { color: var(--terracotta); }
 }
 .row-remove { background: none; border: none; color: var(--text-soft); font-size: 1.1rem; cursor: pointer; }
 .row-remove:hover { color: var(--terracotta); }
+/* Row range: spans the full row under its inputs */
+.row-range { grid-column: 1 / -1; margin-top: -3px; padding-left: 2px; font-size: 0.8rem; color: var(--text-soft); font-variant-numeric: tabular-nums; }
+.range-key { font-size: 0.72rem; color: var(--text-soft); opacity: 0.8; margin-left: 6px; }
 
 .addrow { margin-top: 10px; background: none; border: 1px dashed var(--border); border-radius: 8px; padding: 7px 12px; cursor: pointer; color: var(--moss); font-size: 0.88rem; }
 .tools-row { margin-top: 14px; font-size: 0.85rem; }
@@ -167,6 +170,13 @@ a { color: var(--terracotta); }
 /* ---- Verdict + donut ---- */
 .verdict { font-size: 1.15rem; margin-bottom: 16px; line-height: 1.4; }
 .verdict strong { color: var(--terracotta); }
+/* "Your AI use" total range under the verdict */
+.ai-range { display: flex; flex-direction: column; gap: 2px; margin: -6px 0 16px; font-size: 0.92rem; font-variant-numeric: tabular-nums; }
+.ai-range:empty { display: none; }
+.range-title { font-weight: 600; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-soft); }
+.range-title .range-key { text-transform: none; letter-spacing: 0; font-weight: 400; }
+.range-period { display: inline-block; min-width: 4.8em; color: var(--text-soft); }
+.chart-note { margin: 6px 0 0; font-size: 0.78rem; color: var(--text-soft); }
 .donut-wrap { display: flex; align-items: center; gap: 18px; }
 .donut { width: 130px; height: 130px; border-radius: 50%; flex-shrink: 0; position: relative; }
 .donut::after {
