@@ -1,95 +1,15 @@
 (function () {
   'use strict';
 
-  // ==========================================================================
-  // Data — per-prompt model impacts, ported verbatim from Andy Masley's
-  // AI prompt footprint calculator (EcoLogits v0.10, mean + 95% range).
-  // Source: https://andymasley.com/visuals/ai-prompt-footprint/
-  // ==========================================================================
-  const MODELS = [{"id":"gpt-5.5","name":"GPT-5.5","group":"OpenAI","sizes":{"tweet":{"wh":0.4064,"whmin":0.2917,"whmax":0.5212,"emb":0.0241,"embmin":0.0241,"embmax":0.0241,"ml":1.4658,"mlmin":1.0518,"mlmax":1.8797},"email":{"wh":1.1791,"whmin":0.7888,"whmax":1.5694,"emb":0.0395,"embmin":0.0395,"embmax":0.0395,"ml":4.2522,"mlmin":2.8447,"mlmax":5.6597},"summary":{"wh":1.6942,"whmin":1.1203,"whmax":2.2682,"emb":0.0498,"embmin":0.0498,"embmax":0.0498,"ml":6.1098,"mlmin":4.0399,"mlmax":8.1797},"chat":{"wh":2.6601,"whmin":1.7417,"whmax":3.5784,"emb":0.0692,"embmin":0.0692,"embmax":0.0692,"ml":9.5929,"mlmin":6.2811,"mlmax":12.9047},"report":{"wh":32.279,"whmin":20.7997,"whmax":43.7584,"emb":0.6622,"embmin":0.6622,"embmax":0.6622,"ml":116.4068,"mlmin":75.0091,"mlmax":157.8045},"long":{"wh":96.6681,"whmin":62.23,"whmax":131.1063,"emb":1.9514,"embmin":1.9514,"embmax":1.9514,"ml":348.611,"mlmin":224.4178,"mlmax":472.8041},"agent":{"wh":644.1723,"whmin":414.5847,"whmax":873.76,"emb":12.9507,"embmin":12.9507,"embmax":12.9507,"ml":2323.0577,"mlmin":1495.103,"mlmax":3151.012},"novel":{"wh":3219.5382,"whmin":2071.5998,"whmax":4367.4766,"emb":64.4772,"embmin":64.4772,"embmax":64.4772,"ml":11610.5134,"mlmin":7470.7415,"mlmax":15750.2854}}},{"id":"gpt-5.5-pro","name":"GPT-5.5 Pro","group":"OpenAI","sizes":{"tweet":{"wh":20.758,"whmin":15.2479,"whmax":26.2681,"emb":2.063,"embmin":2.063,"embmax":2.063,"ml":74.859,"mlmin":54.9881,"mlmax":94.7299},"email":{"wh":48.4781,"whmin":29.7437,"whmax":67.2124,"emb":2.4102,"embmin":2.4102,"embmax":2.4102,"ml":174.8249,"mlmin":107.2638,"mlmax":242.386},"summary":{"wh":66.9581,"whmin":39.4076,"whmax":94.5086,"emb":2.6417,"embmin":2.6417,"embmax":2.6417,"ml":241.4689,"mlmin":142.1143,"mlmax":340.8234},"chat":{"wh":101.6082,"whmin":57.5274,"whmax":145.689,"emb":3.0757,"embmin":3.0757,"embmax":3.0757,"ml":366.4263,"mlmin":207.459,"mlmax":525.3935},"report":{"wh":1164.2105,"whmin":613.2001,"whmax":1715.2209,"emb":16.3859,"embmin":16.3859,"embmax":16.3859,"ml":4198.4535,"mlmin":2211.363,"mlmax":6185.5441},"long":{"wh":3474.2155,"whmin":1821.1842,"whmax":5127.2468,"emb":45.3211,"embmin":45.3211,"embmax":45.3211,"ml":12528.9476,"mlmin":6567.676,"mlmax":18490.2193},"agent":{"wh":23130.7433,"whmin":12110.535,"whmax":34150.952,"emb":295.7463,"embmin":295.7463,"embmax":295.7463,"ml":83415.629,"mlmin":43673.818,"mlmax":123157.44},"novel":{"wh":115509.4586,"whmin":60408.4155,"whmax":170610.5016,"emb":1448.6776,"embmin":1448.6776,"embmax":1448.6776,"ml":416557.9101,"mlmin":217848.8553,"mlmax":615266.9648}}},{"id":"gpt-5.4-mini","name":"GPT-5.4 mini","group":"OpenAI","sizes":{"tweet":{"wh":0.041,"whmin":0.0108,"whmax":0.0711,"emb":0.0011,"embmin":0.0004,"embmax":0.0018,"ml":0.1477,"mlmin":0.039,"mlmax":0.2564},"email":{"wh":0.133,"whmin":0.0342,"whmax":0.2317,"emb":0.0024,"embmin":0.001,"embmax":0.0039,"ml":0.4795,"mlmin":0.1234,"mlmax":0.8356},"summary":{"wh":0.1943,"whmin":0.0498,"whmax":0.3388,"emb":0.0033,"embmin":0.0013,"embmax":0.0053,"ml":0.7008,"mlmin":0.1798,"mlmax":1.2217},"chat":{"wh":0.3093,"whmin":0.0791,"whmax":0.5395,"emb":0.005,"embmin":0.002,"embmax":0.008,"ml":1.1155,"mlmin":0.2854,"mlmax":1.9457},"report":{"wh":3.8366,"whmin":0.9771,"whmax":6.6961,"emb":0.0563,"embmin":0.0225,"embmax":0.0901,"ml":13.8358,"mlmin":3.5236,"mlmax":24.148},"long":{"wh":11.5045,"whmin":2.9291,"whmax":20.08,"emb":0.1678,"embmin":0.0671,"embmax":0.2684,"ml":41.4884,"mlmin":10.5631,"mlmax":72.4137},"agent":{"wh":76.688,"whmin":19.524,"whmax":133.8523,"emb":1.1167,"embmin":0.4467,"embmax":1.7867,"ml":276.558,"mlmin":70.4083,"mlmax":482.7073},"novel":{"wh":383.3997,"whmin":97.6029,"whmax":669.1964,"emb":5.5745,"embmin":2.2298,"embmax":8.9193,"ml":1382.6414,"mlmin":351.9819,"mlmax":2413.3008}}},{"id":"claude-opus-4-8","name":"Claude Opus 4.8","group":"Anthropic","sizes":{"tweet":{"wh":0.2673,"whmin":0.1938,"whmax":0.3408,"emb":0.013,"embmin":0.013,"embmax":0.013,"ml":0.9982,"mlmin":0.6301,"mlmax":1.3662},"email":{"wh":0.818,"whmin":0.5701,"whmax":1.0659,"emb":0.0238,"embmin":0.0238,"embmax":0.0238,"ml":3.0632,"mlmin":1.8537,"mlmax":4.2727},"summary":{"wh":1.1852,"whmin":0.821,"whmax":1.5493,"emb":0.0309,"embmin":0.0309,"embmax":0.0309,"ml":4.4398,"mlmin":2.6693,"mlmax":6.2103},"chat":{"wh":1.8735,"whmin":1.2914,"whmax":2.4557,"emb":0.0444,"embmin":0.0444,"embmax":0.0444,"ml":7.0211,"mlmin":4.1987,"mlmax":9.8434},"report":{"wh":22.9837,"whmin":15.7164,"whmax":30.2509,"emb":0.4575,"embmin":0.4575,"embmax":0.4575,"ml":86.179,"mlmin":51.0998,"mlmax":121.2581},"long":{"wh":68.8752,"whmin":47.0752,"whmax":90.6752,"emb":1.3555,"embmin":1.3555,"embmax":1.3555,"ml":258.2614,"mlmin":153.0588,"mlmax":363.464},"agent":{"wh":459.042,"whmin":313.7117,"whmax":604.3727,"emb":9.0083,"embmin":9.0083,"embmax":9.0083,"ml":1721.2837,"mlmin":1019.991,"mlmax":2422.5763},"novel":{"wh":2294.617,"whmin":1567.9779,"whmax":3021.256,"emb":44.9079,"embmin":44.9079,"embmax":44.9079,"ml":8604.2603,"mlmin":5098.0702,"mlmax":12110.4504}}},{"id":"claude-sonnet-4-6","name":"Claude Sonnet 4.6","group":"Anthropic","sizes":{"tweet":{"wh":0.1135,"whmin":0.0886,"whmax":0.1384,"emb":0.0072,"embmin":0.0072,"embmax":0.0072,"ml":0.4214,"mlmin":0.2881,"mlmax":0.5547},"email":{"wh":0.3424,"whmin":0.2588,"whmax":0.426,"emb":0.0148,"embmin":0.0148,"embmax":0.0148,"ml":1.2745,"mlmin":0.8414,"mlmax":1.7077},"summary":{"wh":0.495,"whmin":0.3722,"whmax":0.6178,"emb":0.0198,"embmin":0.0198,"embmax":0.0198,"ml":1.8433,"mlmin":1.2102,"mlmax":2.4764},"chat":{"wh":0.7811,"whmin":0.5849,"whmax":0.9773,"emb":0.0292,"embmin":0.0292,"embmax":0.0292,"ml":2.9097,"mlmin":1.9018,"mlmax":3.9176},"report":{"wh":9.5558,"whmin":7.1079,"whmax":12.0038,"emb":0.3186,"embmin":0.3186,"embmax":0.3186,"ml":35.6133,"mlmin":23.1103,"mlmax":48.1162},"long":{"wh":28.6313,"whmin":21.2882,"whmax":35.9744,"emb":0.9476,"embmin":0.9476,"embmax":0.9476,"ml":106.708,"mlmin":69.2157,"mlmax":144.2002},"agent":{"wh":190.8147,"whmin":141.8623,"whmax":239.7673,"emb":6.3037,"embmin":6.3037,"embmax":6.3037,"ml":711.1667,"mlmin":461.246,"mlmax":961.0873},"novel":{"wh":953.79,"whmin":709.0334,"whmax":1198.5467,"emb":31.4554,"embmin":31.4554,"embmax":31.4554,"ml":3554.8002,"mlmin":2305.3271,"mlmax":4804.2734}}},{"id":"claude-haiku-4-5-20251001","name":"Claude Haiku 4.5","group":"Anthropic","sizes":{"tweet":{"wh":0.0062,"whmin":0.0035,"whmax":0.0089,"emb":0.0003,"embmin":0.0002,"embmax":0.0004,"ml":0.0236,"mlmin":0.0114,"mlmax":0.0358},"email":{"wh":0.0194,"whmin":0.0107,"whmax":0.028,"emb":0.0007,"embmin":0.0005,"embmax":0.001,"ml":0.0735,"mlmin":0.0349,"mlmax":0.1121},"summary":{"wh":0.0281,"whmin":0.0156,"whmax":0.0407,"emb":0.001,"embmin":0.0007,"embmax":0.0014,"ml":0.1068,"mlmin":0.0506,"mlmax":0.163},"chat":{"wh":0.0446,"whmin":0.0246,"whmax":0.0645,"emb":0.0015,"embmin":0.001,"embmax":0.002,"ml":0.1693,"mlmin":0.0801,"mlmax":0.2585},"report":{"wh":0.5485,"whmin":0.3023,"whmax":0.7946,"emb":0.0173,"embmin":0.0116,"embmax":0.0231,"ml":2.084,"mlmin":0.9829,"mlmax":3.1851},"long":{"wh":1.6439,"whmin":0.9059,"whmax":2.3818,"emb":0.0517,"embmin":0.0344,"embmax":0.0689,"ml":6.2465,"mlmin":2.9455,"mlmax":9.5474},"agent":{"wh":10.9567,"whmin":6.038,"whmax":15.8757,"emb":0.344,"embmin":0.2293,"embmax":0.4587,"ml":41.634,"mlmin":19.6317,"mlmax":63.6363},"novel":{"wh":54.7726,"whmin":30.1826,"whmax":79.3626,"emb":1.717,"embmin":1.1447,"embmax":2.2894,"ml":208.1266,"mlmin":98.1348,"mlmax":318.1184}}},{"id":"gemini-3.1-pro-preview","name":"Gemini 3.1 Pro","group":"Google","sizes":{"tweet":{"wh":0.8453,"whmin":0.607,"whmax":1.0837,"emb":0.0521,"embmin":0.0521,"embmax":0.0521,"ml":3.4225,"mlmin":2.4575,"mlmax":4.3874},"email":{"wh":2.4033,"whmin":1.5929,"whmax":3.2136,"emb":0.0693,"embmin":0.0693,"embmax":0.0693,"ml":9.73,"mlmin":6.4492,"mlmax":13.0107},"summary":{"wh":3.4419,"whmin":2.2502,"whmax":4.6336,"emb":0.0807,"embmin":0.0807,"embmax":0.0807,"ml":13.9349,"mlmin":9.1103,"mlmax":18.7596},"chat":{"wh":5.3893,"whmin":3.4827,"whmax":7.296,"emb":0.1021,"embmin":0.1021,"embmax":0.1021,"ml":21.8193,"mlmin":14.0999,"mlmax":29.5387},"report":{"wh":65.1103,"whmin":41.2769,"whmax":88.9437,"emb":0.7585,"embmin":0.7585,"embmax":0.7585,"ml":263.6065,"mlmin":167.1144,"mlmax":360.0987},"long":{"wh":194.9386,"whmin":123.4384,"whmax":266.4387,"emb":2.1854,"embmin":2.1854,"embmax":2.1854,"ml":789.2309,"mlmin":499.7544,"mlmax":1078.7075},"agent":{"wh":1298.9363,"whmin":822.2687,"whmax":1775.604,"emb":14.4193,"embmin":14.4193,"embmax":14.4193,"ml":5258.8917,"mlmin":3329.048,"mlmax":7188.7353},"novel":{"wh":6491.6081,"whmin":4108.2694,"whmax":8874.9469,"emb":71.392,"embmin":71.392,"embmax":71.392,"ml":26282.014,"mlmin":16632.7959,"mlmax":35931.2321}}},{"id":"gemini-3.5-flash","name":"Gemini 3.5 Flash","group":"Google","sizes":{"tweet":{"wh":0.305,"whmin":0.2305,"whmax":0.3795,"emb":0.0162,"embmin":0.0162,"embmax":0.0162,"ml":1.2348,"mlmin":0.9333,"mlmax":1.5364},"email":{"wh":0.8888,"whmin":0.6355,"whmax":1.142,"emb":0.0209,"embmin":0.0209,"embmax":0.0209,"ml":3.5982,"mlmin":2.573,"mlmax":4.6234},"summary":{"wh":1.2779,"whmin":0.9055,"whmax":1.6503,"emb":0.0241,"embmin":0.0241,"embmax":0.0241,"ml":5.1738,"mlmin":3.6661,"mlmax":6.6815},"chat":{"wh":2.0076,"whmin":1.4118,"whmax":2.6035,"emb":0.0301,"embmin":0.0301,"embmax":0.0301,"ml":8.1281,"mlmin":5.7158,"mlmax":10.5404},"report":{"wh":24.3849,"whmin":16.937,"whmax":31.8328,"emb":0.2136,"embmin":0.2136,"embmax":0.2136,"ml":98.7251,"mlmin":68.5713,"mlmax":128.8789},"long":{"wh":73.0312,"whmin":50.6874,"whmax":95.375,"emb":0.6124,"embmin":0.6124,"embmax":0.6124,"ml":295.6751,"mlmin":205.2137,"mlmax":386.1366},"agent":{"wh":486.6687,"whmin":337.71,"whmax":635.6273,"emb":4.0353,"embmin":4.0353,"embmax":4.0353,"ml":1970.334,"mlmin":1367.258,"mlmax":2573.41},"novel":{"wh":2432.3763,"whmin":1687.583,"whmax":3177.1697,"emb":19.9542,"embmin":19.9542,"embmax":19.9542,"ml":9847.7523,"mlmin":6832.3716,"mlmax":12863.1329}}},{"id":"gemini-3.1-flash-lite","name":"Gemini 3.1 Flash-Lite","group":"Google","sizes":{"tweet":{"wh":0.0159,"whmin":0.0045,"whmax":0.0273,"emb":0.0008,"embmin":0.0003,"embmax":0.0012,"ml":0.0644,"mlmin":0.0182,"mlmax":0.1105},"email":{"wh":0.0478,"whmin":0.0128,"whmax":0.0827,"emb":0.0012,"embmin":0.0005,"embmax":0.0019,"ml":0.1933,"mlmin":0.0517,"mlmax":0.335},"summary":{"wh":0.069,"whmin":0.0183,"whmax":0.1197,"emb":0.0015,"embmin":0.0006,"embmax":0.0024,"ml":0.2793,"mlmin":0.074,"mlmax":0.4846},"chat":{"wh":0.1088,"whmin":0.0286,"whmax":0.189,"emb":0.002,"embmin":0.0008,"embmax":0.0032,"ml":0.4405,"mlmin":0.1159,"mlmax":0.7652},"report":{"wh":1.3299,"whmin":0.3458,"whmax":2.3141,"emb":0.0182,"embmin":0.0073,"embmax":0.0292,"ml":5.3844,"mlmin":1.3999,"mlmax":9.369},"long":{"wh":3.9846,"whmin":1.0352,"whmax":6.9339,"emb":0.0535,"embmin":0.0214,"embmax":0.0856,"ml":16.1321,"mlmin":4.1913,"mlmax":28.0729},"agent":{"wh":26.5553,"whmin":6.898,"whmax":46.2123,"emb":0.3547,"embmin":0.142,"embmax":0.5673,"ml":107.5117,"mlmin":27.9277,"mlmax":187.0957},"novel":{"wh":132.7348,"whmin":34.4741,"whmax":230.9956,"emb":1.7636,"embmin":0.7054,"embmax":2.8218,"ml":537.3921,"mlmin":139.5723,"mlmax":935.2119}}}];
-
-  const SIZES = [
-    { id: 'tweet',   label: 'A tweet',                  w: 38 },
-    { id: 'email',   label: 'A short email',            w: 128 },
-    { id: 'summary', label: 'An article summary',       w: 188 },
-    { id: 'chat',    label: 'A chatbot reply',          w: 300 },
-    { id: 'report',  label: 'A 5-page report',          w: 3750 },
-    { id: 'long',    label: 'A long document',          w: 11250 },
-    { id: 'agent',   label: 'A coding / agent session', w: 75000 },
-    { id: 'novel',   label: 'Rewriting Lord of the Rings', w: 480000 },
-  ];
-
-  const WORLD_GRID = 480;
-  const LOCATIONS = [
-    { id: 'us',    label: 'the US',    c: 3000, w: 119000, grid: 380 },
-    { id: 'eu',    label: 'the EU',    c: 1800, w: 66000,  grid: 215 },
-    { id: 'uk',    label: 'the UK',    c: 1700, w: 45000,  grid: 125 },
-    { id: 'cn',    label: 'China',     c: 2500, w: 79000,  grid: 580 },
-    { id: 'in',    label: 'India',     c: 900,  w: 106000, grid: 700 },
-    { id: 'world', label: 'the world', c: 1800, w: 40000,  grid: WORLD_GRID },
-  ];
-  const HOMES = [
-    { id: 'apt', label: 'a small apartment', c: 1500 },
-    { id: 'med', label: 'a medium home',     c: 3500 },
-    { id: 'big', label: 'a big house',       c: 7000 },
-  ];
-  const DRIVING = [
-    { id: 'd0',   label: 'not at all',        c: 0 },
-    { id: 'dlo',  label: 'a little',          c: 1200 },
-    { id: 'davg', label: 'an average amount', c: 4800 },
-    { id: 'dhi',  label: 'a lot',             c: 10000 },
-  ];
-  const DIETS = [
-    { id: 'heavy', label: 'a lot of meat',      c: 3200 },
-    { id: 'avg',   label: 'an average diet',    c: 2500 },
-    { id: 'light', label: 'little meat',        c: 2000 },
-    { id: 'pesc',  label: 'a pescatarian diet', c: 1700 },
-    { id: 'veg',   label: 'a vegetarian diet',  c: 1500 },
-    { id: 'vegan', label: 'a vegan diet',       c: 1050 },
-  ];
-  const FLYING = [
-    { id: 'never', label: 'never',     c: 0 },
-    { id: 'rare',  label: 'rarely',    c: 560 },
-    { id: 'some',  label: 'sometimes', c: 2300 },
-    { id: 'often', label: 'often',     c: 8000 },
-  ];
-
-  // Daily / annual comparison figures — carbon in kg CO2e, water in gallons.
-  const DAILY_ITEMS = [
-    { label: 'A cup of coffee',            c: 0.21, w: 37 },
-    { label: 'An hour on a game console',  c: 0.08, w: 0.1 },
-    { label: '3 minutes in the microwave', c: 0.02, w: 0.05 },
-    { label: 'A mile in a gas car',        c: 0.40, w: 0.1 },
-    { label: 'A 10-minute hot shower',     c: 0.7,  w: 21 },
-    { label: 'A dishwasher load',          c: 0.5,  w: 3.5 },
-    { label: 'A dryer load',               c: 1.2,  w: 0.1 },
-    { label: 'Printing a 400-page book',   c: 2.7,  w: 300 },
-    { label: 'A beef burger',              c: 3.0,  w: 460 },
-  ];
-  const ANNUAL_ITEMS = [
-    { label: 'A cotton T-shirt',                c: 7,    w: 0,      dir: 'add' },
-    { label: 'A new pair of jeans',             c: 33,   w: 2640,   dir: 'add' },
-    { label: 'A new smartphone',                c: 70,   w: 3370,   dir: 'add' },
-    { label: 'A year of daily coffee',          c: 77,   w: 0,      dir: 'add' },
-    { label: 'A beef burger every week',        c: 156,  w: 0,      dir: 'add' },
-    { label: 'A new laptop',                    c: 250,  w: 0,      dir: 'add' },
-    { label: 'A short-haul round-trip flight',  c: 250,  w: 0,      dir: 'add' },
-    { label: 'A round-trip cross-country flight', c: 1000, w: 0,    dir: 'add' },
-    { label: 'One transatlantic flight',        c: 1600, w: 5,      dir: 'add' },
-    { label: 'A year of driving (12,000 mi)',   c: 4800, w: 50,     dir: 'add' },
-    { label: 'Manufacturing a new car',         c: 6000, w: 0,      dir: 'add' },
-    { label: 'Buying LED bulbs',                c: 30,   w: 0,      dir: 'save' },
-    { label: 'Hang-drying your clothes',        c: 140,  w: 0,      dir: 'save' },
-    { label: 'Switching to a hybrid car',       c: 480,  w: 0,      dir: 'save' },
-    { label: 'Buying green electricity',        c: 1380, w: 0,      dir: 'save' },
-    { label: 'Going vegan for a year',          c: 1450, w: 270000, dir: 'save' },
-    { label: 'Switching to green heating',      c: 1990, w: 0,      dir: 'save' },
-    { label: 'Living car-free',                 c: 2400, w: 0,      dir: 'save' },
-    { label: 'Letting your lawn go unwatered',  c: 0,    w: 20000,  dir: 'save' },
-  ];
-
-  const GAL_TO_L = 3.785411784;
-  const DAYS = 365;
+  // Data tables live in data.js; pure calculations live in calc.js.
+  const {
+    MODELS, SIZES, LOCATIONS, HOMES, DRIVING, DIETS, FLYING,
+    DAILY_ITEMS, ANNUAL_ITEMS, DAYS,
+    INPUTS, AGENT_SIZES, CACHE_SETTINGS, AGENT_CROSS_CHECKS,
+    MEDIA_TYPES, MEDIA_TIERS, STREAMING_DEVICES, STREAMING_CROSS_CHECKS,
+    CALL_DEVICES, CALL_DATA, CALL_CROSS_CHECKS, GLOSSARY, SOURCES,
+  } = window.FootprintData;
+  const Calc = window.FootprintCalc;
 
   // ==========================================================================
   // Persona presets
@@ -102,39 +22,138 @@
     { id: 'researcher', label: 'Daily researcher', icon: '🔬',
       rows: [['gpt-5.5', 'report', 2], ['claude-opus-4-8', 'long', 1], ['gpt-5.5', 'chat', 10]] },
     { id: 'engineer', label: 'Software engineer', icon: '💻',
-      rows: [['claude-sonnet-4-6', 'agent', 3], ['claude-sonnet-4-6', 'chat', 15]] },
+      rows: [['claude-sonnet-4-6', 'agent-light', 3], ['claude-sonnet-4-6', 'chat', 15]] },
     { id: 'power',    label: 'AI power user', icon: '⚡',
-      rows: [['gpt-5.5-pro', 'report', 2], ['claude-opus-4-8', 'agent', 2], ['gpt-5.5', 'chat', 30]] },
+      rows: [['gpt-5.5-pro', 'report', 2], ['claude-opus-4-8', 'agent-heavy', 2], ['gpt-5.5', 'chat', 30]] },
     { id: 'team',     label: 'Small company / team', icon: '🏢',
       rows: [['gpt-5.5', 'chat', 10], ['gpt-5.5', 'email', 5], ['gpt-5.5', 'summary', 2]] },
+
+    // Reference employee profiles (research.md). Quantities are illustrative,
+    // set with the user in planning (plan.md, "Preset quantities"); the page
+    // labels them so. A row's optional 4th element holds extra row fields.
+    { id: 'alex', label: 'Alex, video editor', icon: '🎬', profile: true, loc: 'us',
+      rows: [['gpt-5.5', 'chat', 10]],
+      media: [['image', 'standard', 10], ['video', 'mid', 20]],
+      streaming: { tv: 2, laptop: 1, phone: 1 } },
+    { id: 'jordan', label: 'Jordan, creative technologist', icon: '🧪', profile: true, loc: 'us',
+      rows: [['gpt-5.5', 'agent-heavy', 1, { project: 20 }], ['claude-sonnet-4-6', 'chat', 10]],
+      media: [['image', 'draft', 5]],
+      streaming: { laptop: 1 },
+      calls: { hours: 2, device: 'laptop', camera: 'on' } },
+    { id: 'robin', label: 'Robin, operations manager', icon: '📋', profile: true, loc: 'us',
+      rows: [['gpt-5.5', 'chat', 2]],
+      streaming: { tv: 2, phone: 1 },
+      calls: { hours: 4, device: 'laptop', camera: 'on' } },
   ];
 
   // ==========================================================================
   // State
   // ==========================================================================
   let uidSeq = 1;
-  const state = { rows: [], metric: 'carbon', persona: 'casual', loc: 'us', home: 'med', drive: 'davg', diet: 'avg', fly: 'some' };
+  const noStreaming = () => Object.fromEntries(STREAMING_DEVICES.map((d) => [d.id, 0]));
+  const noCalls = () => ({ hours: 0, device: 'laptop', camera: 'on' });
+  const state = { rows: [], media: [], streaming: noStreaming(), calls: noCalls(), metric: 'carbon', persona: 'casual', loc: 'us', home: 'med', drive: 'davg', diet: 'avg', fly: 'some' };
+  // One-line message shown above the rows (e.g. an old share link was changed).
+  let notice = '';
+
+  // Every row carries the agent fields too, so switching a row's length to an
+  // agent session has sensible defaults: a 20-session project, and custom
+  // token counts that start at the heavy tier's split at the 10% setting.
+  function newRow(model, size, count, extra) {
+    return Object.assign(
+      { id: uidSeq++, model, size, count, project: 20, fresh: 360000, cache: 9600000, output: 40000, cacheSetting: 0.10 },
+      extra || {});
+  }
+
+  // Generated-media rows: { type: 'video'|'image', tier, amount per day }.
+  // Defaults when added or when the type changes: 10 s of mid-size video, or
+  // 5 standard images.
+  const MEDIA_DEFAULTS = { video: { tier: 'mid', amount: 10 }, image: { tier: 'standard', amount: 5 } };
+  function newMediaRow(type, tier, amount) {
+    const d = MEDIA_DEFAULTS[type] || MEDIA_DEFAULTS.image;
+    return { id: uidSeq++, type: MEDIA_DEFAULTS[type] ? type : 'image', tier: tier || d.tier, amount: amount == null ? d.amount : amount };
+  }
+
+  // Share-link row format (fields separated by ':'):
+  //   text rows    model:size:count
+  //   agent tiers  model:size:count:project
+  //   custom agent model:agent-custom:count:project:fresh:cache:output:cacheSetting
+  // Rows with the removed fixed 'agent' size are dropped with a notice
+  // (plan.md, "Old share links", user's choice A).
+  function rowFromLink(chunk) {
+    const [model, size, count, project, fresh, cache, output, setting] = chunk.split(':');
+    const num = (v, dflt) => (v === undefined || v === '' || !isFinite(Number(v)) ? dflt : Math.max(0, Number(v)));
+    const row = newRow(model, size, num(count, 0));
+    if (Calc.isAgentSize(size)) {
+      row.project = num(project, row.project);
+      if (size === 'agent-custom') {
+        row.fresh = num(fresh, row.fresh);
+        row.cache = num(cache, row.cache);
+        row.output = num(output, row.output);
+        row.cacheSetting = CACHE_SETTINGS.includes(Number(setting)) ? Number(setting) : row.cacheSetting;
+      }
+    }
+    return row;
+  }
+  function rowToLink(r) {
+    const base = `${r.model}:${r.size}:${r.count}`;
+    if (!Calc.isAgentSize(r.size)) return base;
+    if (r.size !== 'agent-custom') return `${base}:${r.project}`;
+    return `${base}:${r.project}:${r.fresh}:${r.cache}:${r.output}:${r.cacheSetting}`;
+  }
 
   function loadFromUrl() {
+    const streamed = noStreaming();
+    const calls = noCalls();
     try {
       const p = new URLSearchParams(location.hash.slice(1));
       const r = p.get('r');
       if (r) {
-        state.rows = r.split(',').filter(Boolean).map((chunk) => {
-          const [model, size, count] = chunk.split(':');
-          return { id: uidSeq++, model, size, count: Number(count) || 0 };
-        });
+        const all = r.split(',').filter(Boolean).map(rowFromLink);
+        state.rows = all.filter((row) => row.size !== 'agent');
+        if (state.rows.length < all.length) {
+          notice = "An old 'agent session' row was removed because the method changed. Add an agent session to include it.";
+        }
+        state.persona = null;
+      }
+      // Media rows: m=type:tier:amount,...
+      const m = p.get('m');
+      if (m) {
+        state.media = m.split(',').filter(Boolean).map((chunk) => {
+          const [type, tier, amount] = chunk.split(':');
+          return newMediaRow(type, tier, Math.max(0, Number(amount) || 0));
+        }).filter((row) => Calc.getMediaTier(row.type, row.tier));
         state.persona = null;
       }
       ['metric', 'loc', 'home', 'drive', 'diet', 'fly'].forEach((k) => {
         if (p.get(k)) state[k] = p.get(k);
       });
+      // Streaming hours: s=device:hours,... (applied below, after the preset
+      // fallback, which resets every input)
+      (p.get('s') || '').split(',').filter(Boolean).forEach((chunk) => {
+        const [device, hours] = chunk.split(':');
+        if (device in streamed) streamed[device] = Math.max(0, Number(hours) || 0);
+      });
+      // Video calls: c=hours:device:camera
+      const c = (p.get('c') || '').split(':');
+      if (Number(c[0]) > 0 && Calc.getCallDevice(c[1])) {
+        calls.hours = Number(c[0]);
+        calls.device = c[1];
+        calls.camera = c[2] === 'off' ? 'off' : 'on';
+      }
     } catch (e) { /* ignore malformed url state */ }
-    if (!state.rows.length) applyPersona(state.persona || 'casual', { silent: true });
+    const anyStreaming = Object.values(streamed).some((h) => h > 0);
+    if (!state.rows.length && !state.media.length && !anyStreaming && !calls.hours) applyPersona(state.persona || 'casual', { silent: true });
+    if (anyStreaming) { state.streaming = streamed; state.persona = null; }
+    if (calls.hours) { state.calls = calls; state.persona = null; }
   }
   function saveToUrl() {
     const p = new URLSearchParams();
-    p.set('r', state.rows.map((r) => `${r.model}:${r.size}:${r.count}`).join(','));
+    p.set('r', state.rows.map(rowToLink).join(','));
+    if (state.media.length) p.set('m', state.media.map((r) => `${r.type}:${r.tier}:${r.amount}`).join(','));
+    const streamed = otherRows().filter((r) => Calc.isStreamingRow(r) && r.hours);
+    if (streamed.length) p.set('s', streamed.map((r) => `${r.device}:${r.hours}`).join(','));
+    if (state.calls.hours) p.set('c', `${state.calls.hours}:${state.calls.device}:${state.calls.camera}`);
     p.set('metric', state.metric);
     p.set('loc', state.loc); p.set('home', state.home); p.set('drive', state.drive);
     p.set('diet', state.diet); p.set('fly', state.fly);
@@ -145,57 +164,34 @@
     const persona = PERSONAS.find((x) => x.id === id);
     if (!persona) return;
     state.persona = id;
-    state.rows = persona.rows.map(([model, size, count]) => ({ id: uidSeq++, model, size, count }));
+    state.rows = persona.rows.map(([model, size, count, extra]) => newRow(model, size, count, extra));
+    state.media = (persona.media || []).map(([type, tier, amount]) => newMediaRow(type, tier, amount));
+    state.streaming = Object.assign(noStreaming(), persona.streaming || {});
+    state.calls = Object.assign(noCalls(), persona.calls || {});
+    if (persona.loc) state.loc = persona.loc;
     if (!(opts && opts.silent)) render();
   }
 
   // ==========================================================================
-  // Math
+  // Math — thin wrappers that pass the current page state into calc.js
   // ==========================================================================
-  const getModel = (id) => MODELS.find((m) => m.id === id) || MODELS[0];
-  const getLoc = () => LOCATIONS.find((x) => x.id === state.loc) || LOCATIONS[0];
-
-  function perPrompt(model, size, metric) {
-    const s = model.sizes[size];
-    if (metric === 'carbon') {
-      const grid = getLoc().grid; // g CO2e/kWh
-      return (s.wh / 1000) * grid + s.emb; // grams
-    }
-    return s.ml / 1000; // liters
-  }
-  function aiDaily(metric) {
-    let total = 0;
-    for (const r of state.rows) {
-      if (!r.count) continue;
-      const m = getModel(r.model);
-      if (!m.sizes[r.size]) continue;
-      total += r.count * perPrompt(m, r.size, metric);
-    }
-    return total;
-  }
-  function rowShares(metric) {
-    return state.rows
-      .filter((r) => r.count > 0)
-      .map((r) => {
-        const m = getModel(r.model);
-        const v = r.count * perPrompt(m, r.size, metric);
-        return { label: m.name, value: v, size: r.size };
-      })
-      .filter((r) => r.value > 0)
-      .sort((a, b) => b.value - a.value);
-  }
-  function dailyFootprint(metric) {
-    const loc = getLoc();
-    const home = HOMES.find((x) => x.id === state.home) || HOMES[1];
-    const drive = DRIVING.find((x) => x.id === state.drive) || DRIVING[2];
-    const diet = DIETS.find((x) => x.id === state.diet) || DIETS[1];
-    const fly = FLYING.find((x) => x.id === state.fly) || FLYING[2];
-    if (metric === 'carbon') return ((loc.c + home.c + drive.c + diet.c + fly.c) * 1000) / DAYS; // g/day
-    return (loc.w * GAL_TO_L) / DAYS; // L/day (water folded onto location baseline only)
-  }
-  // metric value for a comparison item, in the same base units as aiDaily (g carbon or L water)
-  function itemDaily(item, metric) { return metric === 'carbon' ? item.c * 1000 : item.w * GAL_TO_L; }
-  function itemAnnual(item, metric) { return metric === 'carbon' ? item.c * 1000 : item.w * GAL_TO_L; }
+  const getLoc = () => Calc.getLocation(state.loc);
+  // Every AI row: text and agent rows, then generated-media rows.
+  const aiRows = () => state.rows.concat(state.media);
+  const aiDaily = (metric) => Calc.totalDaily(aiRows(), metric, getLoc().grid);
+  const aiRange = (metric) => Calc.totalRange(aiRows(), metric, getLoc().grid);
+  // Every other-digital row: streaming hours per device, then the call.
+  // Kept apart from aiRows(), so these never change "Your AI use".
+  const callRow = () => ({ callDevice: state.calls.device, camera: state.calls.camera, hours: state.calls.hours });
+  const otherRows = () => STREAMING_DEVICES.map((d) => ({ device: d.id, hours: state.streaming[d.id] })).concat([callRow()]);
+  const otherDaily = (metric) => Calc.totalDaily(otherRows(), metric, getLoc().grid);
+  const otherRange = (metric) => Calc.totalRange(otherRows(), metric, getLoc().grid);
+  const rowRange = (row, metric) => Calc.rowRange(row, metric, getLoc().grid);
+  const projectRange = (row, metric) => Calc.projectRange(row, metric, getLoc().grid);
+  const rowShares = (metric) => Calc.rowShares(aiRows(), metric, getLoc().grid);
+  const dailyFootprint = (metric) => Calc.dailyFootprint(state, metric);
+  const itemDaily = Calc.itemDaily;
+  const itemAnnual = Calc.itemAnnual;
 
   // ==========================================================================
   // Formatting
@@ -209,32 +205,49 @@
     if (a >= 0.1) return String(Math.round(n * 100) / 100);
     return String(Number(n.toPrecision(2)));
   }
-  function fmtCarbon(g) {
-    if (g >= 1e6) return sig(g / 1e6) + ' t CO₂e';
-    if (g >= 1000) return sig(g / 1000) + ' kg CO₂e';
-    return sig(g) + ' g CO₂e';
+  // Display unit for a value (Wh energy, g carbon, or L water), chosen by its size.
+  // Energy stays in Wh so it reads directly against the spec and cross-checks.
+  function unitFor(v, metric) {
+    if (metric === 'energy') return { unit: 'Wh', conv: (x) => x };
+    if (metric === 'carbon') {
+      if (v >= 1e6) return { unit: 't CO₂e', conv: (x) => x / 1e6 };
+      if (v >= 1000) return { unit: 'kg CO₂e', conv: (x) => x / 1000 };
+      return { unit: 'g CO₂e', conv: (x) => x };
+    }
+    if (v >= 1) return { unit: 'L', conv: (x) => x };
+    return { unit: 'mL', conv: (x) => x * 1000 };
   }
-  function fmtWater(l) {
-    if (l >= 1) return sig(l) + ' L';
-    return sig(l * 1000) + ' mL';
+  // A declared input value (watts, Wh per unit) at its own precision, up to
+  // 4 significant figures, e.g. 93.2, 2.228, 12.94 — not rounded like results.
+  const fmtInput = (v) => String(Number(v.toPrecision(4)));
+  function fmtMetric(v, metric) {
+    const u = unitFor(v, metric || state.metric);
+    return sig(u.conv(v)) + ' ' + u.unit;
   }
-  const fmtMetric = (v) => (state.metric === 'carbon' ? fmtCarbon(v) : fmtWater(v));
+  // "low · central · high unit" — all three in the unit that fits the central
+  // value, so the numbers can be compared at a glance.
+  function fmtRange(r, metric) {
+    const u = unitFor(r.central, metric || state.metric);
+    return [r.low, r.central, r.high].map((v) => sig(u.conv(v))).join(' · ') + ' ' + u.unit;
+  }
 
   // ==========================================================================
   // Render
   // ==========================================================================
   const $ = (id) => document.getElementById(id);
 
+  // Presets in two rows: the general AI-use presets, then the three
+  // illustrative employee profiles after their label.
   function renderPersonas() {
-    const host = $('personas');
-    host.innerHTML = '';
+    $('personas').innerHTML = '';
+    $('profiles').querySelectorAll('.persona-btn').forEach((b) => b.remove());
     PERSONAS.forEach((p) => {
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'persona-btn' + (state.persona === p.id ? ' is-active' : '');
       btn.textContent = `${p.icon} ${p.label}`;
       btn.addEventListener('click', () => { applyPersona(p.id); saveToUrl(); });
-      host.appendChild(btn);
+      $(p.profile ? 'profiles' : 'personas').appendChild(btn);
     });
   }
 
@@ -245,26 +258,121 @@
   }
 
   const modelOptionsHtml = MODELS.map((m) => `<option value="${m.id}">${m.name}</option>`).join('');
-  const sizeOptionsHtml = SIZES.map((s) => `<option value="${s.id}">${s.label}</option>`).join('');
+  const sizeOptionsHtml = SIZES.map((s) => `<option value="${s.id}">${s.label}</option>`).join('') +
+    '<optgroup label="Agent sessions (not model-specific)">' +
+    AGENT_SIZES.map((s) => `<option value="${s.id}">${s.label}${s.detail ? ' · ' + s.detail : ''}</option>`).join('') +
+    '</optgroup>';
+  const pct = (x) => `${Math.round(x * 100)}%`;
+  // "source 13" / "sources 7, 18" with each number linking to the source
+  // (data.js SOURCES, numbered as in research.md). A derived source links to
+  // the sources it was derived from; 'M' is the original calculator.
+  function sourceLink(n) {
+    const s = SOURCES[n];
+    if (!s) return String(n);
+    if (s.derivedFrom) return `${n} (derived from ${s.derivedFrom.map(sourceLink).join(', ')})`;
+    return `<a href="${s.url}" target="_blank" rel="noopener" title="${s.cite}">${n === 'M' ? 'Masley' : n}</a>`;
+  }
+  const cite = (sources) => `source${sources.length > 1 ? 's' : ''} ${sources.map(sourceLink).join(', ')}`;
 
+  // Energy / carbon / water result slots, filled by fillMetrics().
+  const METRICS_HTML = `
+      <div class="metric-results">
+        <span class="range-period">Energy</span><span data-out="energy"></span>
+        <span class="range-period">Carbon</span><span data-out="carbon"></span>
+        <span class="range-period">Water</span><span data-out="water"></span>
+      </div>`;
+  function fillMetrics(node, row, perDayNote) {
+    for (const metric of ['energy', 'carbon', 'water']) {
+      node.querySelector(`[data-out="${metric}"]`).innerHTML = fmtRange(rowRange(row, metric), metric) +
+        (metric === 'energy' ? ` <span class="range-key">low · central · high, per day (${perDayNote})</span>` : '');
+    }
+  }
+
+  // The agent-session box under an agent row: inputs (project sessions; token
+  // counts and cache-read setting in custom mode) plus result slots that
+  // fillRowOutputs() updates in place.
+  function agentDetailHtml(row) {
+    const tier = Calc.getAgentSize(row.size);
+    const f = INPUTS.providerFactor.central;
+    const custom = row.size === 'agent-custom';
+    const tokenInputs = custom ? `
+      <div class="agent-tokens">
+        <label>Fresh-input tokens <input type="number" min="0" step="1000" data-field="fresh" value="${row.fresh}"></label>
+        <label>Cache-read tokens <input type="number" min="0" step="1000" data-field="cache" value="${row.cache}"></label>
+        <label>Output tokens <input type="number" min="0" step="1000" data-field="output" value="${row.output}"></label>
+        <label>Cache-read cost <select data-field="cacheSetting">${CACHE_SETTINGS.map((c) =>
+          `<option value="${c}"${c === row.cacheSetting ? ' selected' : ''}>${pct(c)} of fresh input</option>`).join('')}</select></label>
+      </div>
+      <p class="agent-formula">Wh per session = (fresh × ${f.input} + cache reads × ${f.input} × ${pct(row.cacheSetting)} + output × ${f.output}) ÷ 1,000 × PUE ${INPUTS.pue.central}
+        <span class="range-key">central values; low and high use cache-read ${pct(INPUTS.cacheRead.low)}–${pct(INPUTS.cacheRead.high)}, per-token ${INPUTS.providerFactor.low.input}–${INPUTS.providerFactor.high.input} (input) and ${INPUTS.providerFactor.low.output}–${INPUTS.providerFactor.high.output} (output) Wh per 1,000 tokens, PUE ${INPUTS.pue.low}–${INPUTS.pue.high} · per-token ${cite(INPUTS.providerFactor.sources)}, cache-read ${cite(INPUTS.cacheRead.sources)}, PUE ${cite(INPUTS.pue.sources)}</span></p>` : '';
+    const xchecks = AGENT_CROSS_CHECKS.map((c) =>
+      `${c.label} ${sig(c.wh)} Wh${c.range ? ` (${sig(c.range[0])}–${sig(c.range[1])})` : ''} (${cite(c.sources)})`).join(' · ');
+    return `
+      <p class="agent-head">${tier.label} · <strong>not model-specific</strong>${tier.detail ? ' · ' + tier.detail : ''} · ${cite(tier.sources)}</p>
+      ${tokenInputs}
+      ${METRICS_HTML}
+      <p class="agent-project">Project: <input type="number" min="0" step="1" data-field="project" value="${row.project}"> sessions →
+        <span data-out="project"></span> <span class="range-key">not added to daily or yearly totals</span></p>
+      <p class="agent-xcheck">Per session: this estimate <span data-out="session"></span> · ${xchecks}</p>
+      <p class="agent-note">Estimated from per-token factors and prices; no source measures agent-session energy directly.</p>`;
+  }
+
+  // Result text for one row, written into its existing DOM node. Called on
+  // every value change, so typing never rebuilds the inputs (keeps focus).
+  function fillRowOutputs(node, row) {
+    const first = row === state.rows[0];
+    if (!Calc.isAgentSize(row.size)) {
+      // Per-day range in the selected metric; the first row says which number is which.
+      node.querySelector('.row-range').innerHTML = fmtRange(rowRange(row, state.metric)) +
+        (first ? ` <span class="range-key">low · central · high, per day · EcoLogits v0.10, ${cite([4, 'M'])}</span>` : '');
+      return;
+    }
+    const out = (name) => node.querySelector(`[data-out="${name}"]`);
+    fillMetrics(node, row, `${sig(row.count)} session${row.count === 1 ? '' : 's'}`);
+    const proj = projectRange(row, 'energy');
+    out('project').textContent = `${fmtRange(proj, 'energy')} (${fmtRange(projectRange(row, state.metric))})`;
+    out('session').textContent = `${fmtMetric(Calc.agentSessionWh(row, Calc.SCENARIOS.central), 'energy')} central`;
+  }
+
+  // Rebuilds the row inputs. Only called when the rows' structure changes
+  // (add, remove, a dropdown, a preset, the metric); typing calls onValues().
   function renderRows() {
     const host = $('rows');
     host.innerHTML = '';
     const tpl = $('row-tpl');
     state.rows.forEach((row) => {
       const node = tpl.content.firstElementChild.cloneNode(true);
+      node.dataset.rowId = row.id;
+      const agent = Calc.isAgentSize(row.size);
       const modelSel = node.querySelector('.row-model');
       const sizeSel = node.querySelector('.row-size');
       const countInput = node.querySelector('.row-count');
-      modelSel.innerHTML = modelOptionsHtml;
+      // Agent rows ignore the model, so the dropdown is greyed out; the row
+      // keeps its model in case the user switches back to a text length.
+      modelSel.innerHTML = agent ? '<option>Not model-specific</option>' : modelOptionsHtml;
+      modelSel.disabled = agent;
+      if (!agent) modelSel.value = row.model;
       sizeSel.innerHTML = sizeOptionsHtml;
-      modelSel.value = row.model;
       sizeSel.value = row.size;
       countInput.value = row.count;
+      countInput.setAttribute('aria-label', agent ? 'Sessions per day' : 'Per day');
+      const detail = node.querySelector('.agent-detail');
+      if (agent) detail.innerHTML = agentDetailHtml(row);
+      detail.hidden = !agent;
+      node.querySelector('.row-range').hidden = agent;
+      fillRowOutputs(node, row);
 
       modelSel.addEventListener('change', () => { row.model = modelSel.value; state.persona = null; render(); saveToUrl(); });
       sizeSel.addEventListener('change', () => { row.size = sizeSel.value; state.persona = null; render(); saveToUrl(); });
-      countInput.addEventListener('input', () => { row.count = Math.max(0, Number(countInput.value) || 0); state.persona = null; render(); saveToUrl(); });
+      countInput.addEventListener('input', () => { row.count = Math.max(0, Number(countInput.value) || 0); onValues(); });
+      // Agent-box inputs: numbers update in place; the cache-read setting
+      // changes the formula text, so it rebuilds.
+      detail.querySelectorAll('input[data-field]').forEach((inp) => {
+        inp.addEventListener('input', () => { row[inp.dataset.field] = Math.max(0, Number(inp.value) || 0); onValues(); });
+      });
+      detail.querySelectorAll('select[data-field]').forEach((sel) => {
+        sel.addEventListener('change', () => { row[sel.dataset.field] = Number(sel.value); state.persona = null; render(); saveToUrl(); });
+      });
       node.querySelector('.row-remove').addEventListener('click', () => {
         state.rows = state.rows.filter((r) => r.id !== row.id);
         state.persona = null;
@@ -272,6 +380,174 @@
       });
       host.appendChild(node);
     });
+  }
+
+  // Generated-media rows (spec feature 1).
+  function mediaDetailHtml(row) {
+    const tier = Calc.getMediaTier(row.type, row.tier);
+    const input = INPUTS[tier.input];
+    const warning = row.type === 'video'
+      ? '<p class="media-warning">⚠ Energy grows faster than clip length, but this estimate is linear: clips much longer than about 5 s are likely undercounted.</p>'
+      : '';
+    const perUnit = row.type === 'video' ? 'Wh per video-second' : 'GPU Wh per image';
+    return `${warning}${METRICS_HTML}
+      <p class="media-measured">${tier.label}: ${fmtInput(input.low)} · ${fmtInput(input.central)} · ${fmtInput(input.high)} ${perUnit}. Measured: ${tier.measured} · ${cite(input.sources)}</p>`;
+  }
+  function fillMediaOutputs(node, row) {
+    const unit = row.type === 'video' ? 's of video' : `image${row.amount === 1 ? '' : 's'}`;
+    fillMetrics(node, row, `${sig(row.amount)} ${unit}`);
+  }
+  function renderMediaRows() {
+    const host = $('media-rows');
+    host.innerHTML = '';
+    $('media-head').hidden = !state.media.length;
+    const tpl = $('media-tpl');
+    state.media.forEach((row) => {
+      const node = tpl.content.firstElementChild.cloneNode(true);
+      node.dataset.rowId = row.id;
+      const typeSel = node.querySelector('.media-type');
+      const tierSel = node.querySelector('.media-tier');
+      const amount = node.querySelector('.media-amount');
+      const tier = Calc.getMediaTier(row.type, row.tier);
+      typeSel.innerHTML = MEDIA_TYPES.map((t) => `<option value="${t.id}">${t.label}</option>`).join('');
+      typeSel.value = row.type;
+      tierSel.innerHTML = MEDIA_TIERS[row.type].map((t) => `<option value="${t.id}">${t.label}</option>`).join('');
+      tierSel.value = row.tier;
+      tierSel.title = `Measured: ${tier.measured}`; // tooltip naming the measured model and resolution
+      amount.value = row.amount;
+      const amountLabel = MEDIA_TYPES.find((t) => t.id === row.type).amountLabel;
+      amount.setAttribute('aria-label', amountLabel);
+      amount.title = amountLabel;
+      node.querySelector('.media-detail').innerHTML = mediaDetailHtml(row);
+      fillMediaOutputs(node, row);
+
+      typeSel.addEventListener('change', () => {
+        Object.assign(row, newMediaRow(typeSel.value), { id: row.id });
+        state.persona = null; render(); saveToUrl();
+      });
+      tierSel.addEventListener('change', () => { row.tier = tierSel.value; state.persona = null; render(); saveToUrl(); });
+      amount.addEventListener('input', () => { row.amount = Math.max(0, Number(amount.value) || 0); onValues(); });
+      node.querySelector('.row-remove').addEventListener('click', () => {
+        state.media = state.media.filter((r) => r.id !== row.id);
+        state.persona = null;
+        render(); saveToUrl();
+      });
+      host.appendChild(node);
+    });
+  }
+
+  // Streaming by device (spec feature 3).
+  function fillStreamOutputs(node, row) {
+    const results = node.querySelector('.stream-results');
+    results.hidden = !row.hours;
+    if (row.hours) fillMetrics(results, row, `${sig(row.hours)} h`);
+  }
+  function renderStreaming() {
+    const host = $('stream-rows');
+    host.innerHTML = '';
+    const tpl = $('stream-tpl');
+    otherRows().filter(Calc.isStreamingRow).forEach((row) => {
+      const d = Calc.getStreamingDevice(row.device);
+      const input = INPUTS[d.input];
+      const node = tpl.content.firstElementChild.cloneNode(true);
+      node.dataset.device = d.id;
+      node.querySelector('.stream-name').textContent = d.label;
+      const hours = node.querySelector('.stream-hours');
+      hours.value = row.hours;
+      node.querySelector('.stream-power').innerHTML = `${d.label} power ${fmtInput(input.low)} · ${fmtInput(input.central)} · ${fmtInput(input.high)} W` +
+        (d.borrowedNote ? ` · <span class="borrowed">borrowed range: ${d.borrowedNote}</span>` : '') +
+        ` · ${cite(input.sources)}`;
+      node.querySelector('.stream-results').innerHTML = METRICS_HTML;
+      fillStreamOutputs(node, row);
+      hours.addEventListener('input', () => { state.streaming[d.id] = Math.max(0, Number(hours.value) || 0); onValues(); });
+      host.appendChild(node);
+    });
+    const net = INPUTS.streamNetwork;
+    const total = (l) => net[l].network + net[l].dc;
+    $('stream-network').innerHTML = `Network and data centre, every device: ${fmtInput(total('low'))} · ${fmtInput(total('central'))} · ${fmtInput(total('high'))} Wh per hour` +
+      ` · <span class="borrowed">borrowed range</span> · ${cite(net.sources)}`;
+    $('stream-xcheck').innerHTML = 'Published estimates for one hour of streaming, for comparison (not part of the range): ' +
+      STREAMING_CROSS_CHECKS.map((c) => `${c.label} ${c.g} g ${c.gas} (${c.note}; ${cite(c.sources)})`).join(' · ') + '.';
+  }
+
+  // Video calls (spec feature 4).
+  const rangeText = (input, unit) => `${fmtInput(input.low)} · ${fmtInput(input.central)} · ${fmtInput(input.high)} ${unit}` +
+    (input.borrowed && input.borrowed.length ? ` <span class="borrowed">(${input.borrowed.join(' and ')} borrowed)</span>` : '');
+  function fillCallOutputs() {
+    const row = callRow();
+    const device = Calc.getCallDevice(row.callDevice);
+    $('call-unavailable').hidden = !device.unavailable;
+    $('call-unavailable').textContent = device.unavailable
+      ? `${device.label}: not available — ${device.unavailable}, so nothing is added to your totals.` : '';
+    const results = $('call-results');
+    results.hidden = !row.hours || !!device.unavailable;
+    if (!results.hidden) fillMetrics(results, row, `${sig(row.hours)} h`);
+    if (device.unavailable) { $('call-parts').textContent = ''; return; }
+    // Per-hour central breakdown, and what the other camera setting gives.
+    const p = Calc.callHourParts(row.callDevice, row.camera, Calc.SCENARIOS.central);
+    const total = p.device + p.network + p.server;
+    const other = row.camera === 'on' ? 'off' : 'on';
+    const q = Calc.callHourParts(row.callDevice, other, Calc.SCENARIOS.central);
+    const otherTotal = q.device + q.network + q.server;
+    const change = Math.round((otherTotal / total - 1) * 100);
+    const f3 = (v) => String(Number(v.toPrecision(3))); // spec-level precision, e.g. 24.8
+    $('call-parts').textContent = `One hour, central: device ${f3(p.device)} Wh (${Math.round((p.device / total) * 100)}%) · ` +
+      `network ${f3(p.network)} Wh · server ${f3(p.server)} Wh = ${f3(total)} Wh. ` +
+      `Camera ${other}: ${f3(otherTotal)} Wh (${change > 0 ? '+' : '−'}${Math.abs(change)}%).`;
+  }
+  function renderCalls() {
+    $('call-hours').value = state.calls.hours;
+    $('call-device').innerHTML = CALL_DEVICES.map((d) =>
+      `<option value="${d.id}">${d.label}${d.unavailable ? ' (not available)' : ''}</option>`).join('');
+    $('call-device').value = state.calls.device;
+    $('call-camera').value = state.calls.camera;
+    $('call-results').innerHTML = METRICS_HTML;
+    const device = Calc.getCallDevice(state.calls.device);
+    const cam = state.calls.camera;
+    const power = device.unavailable ? null : INPUTS[device.power[cam]];
+    const data = INPUTS[CALL_DATA[cam]];
+    $('call-basis').innerHTML = (power ? `${device.label} power ${rangeText(power, 'W')} (${cite(power.sources)}) · ` : '') +
+      `data ${rangeText(data, 'GB per hour')} (${cite(data.sources)}) · ` +
+      `network ${rangeText(INPUTS.networkPerGB, 'Wh per GB')} (${cite(INPUTS.networkPerGB.sources)}) · ` +
+      `server ${rangeText(INPUTS.serverProxy, 'Wh per hour')}, a proxy from streaming (${cite(INPUTS.serverProxy.sources)})`;
+    // Cross-checks: text only, never part of a range. Greenspector is compared
+    // live with this calculator's phone, camera-on estimate on the chosen grid.
+    const phoneG = Calc.totalDaily([{ callDevice: 'phone', camera: 'on', hours: 1 }], 'carbon', getLoc().grid);
+    $('call-xcheck').innerHTML = 'Published estimates for one hour of a call, for comparison (not part of the range): ' +
+      CALL_CROSS_CHECKS.map((c) => {
+        let t = `${c.label}: ${c.text}`;
+        if (c.phoneRatioG) t += `, about ${sig(c.phoneRatioG / phoneG)}× this calculator’s phone, camera-on estimate on the grid for ${getLoc().label}; the gap is unexplained`;
+        if (c.disputed) t += ` — <span class="borrowed">${c.disputed}</span>`;
+        return `${t} (${cite(c.sources)})`;
+      }).join(' · ') + '.';
+    fillCallOutputs();
+  }
+
+  // A typed value changed: refresh every number on the page without
+  // rebuilding the inputs, so the box being typed in keeps focus.
+  function onValues() {
+    state.persona = null;
+    renderPersonas();
+    state.rows.forEach((row) => {
+      const node = $('rows').querySelector(`[data-row-id="${row.id}"]`);
+      if (node) fillRowOutputs(node, row);
+    });
+    state.media.forEach((row) => {
+      const node = $('media-rows').querySelector(`[data-row-id="${row.id}"]`);
+      if (node) fillMediaOutputs(node, row);
+    });
+    otherRows().filter(Calc.isStreamingRow).forEach((row) => {
+      const node = $('stream-rows').querySelector(`[data-device="${row.device}"]`);
+      if (node) fillStreamOutputs(node, row);
+    });
+    fillCallOutputs();
+    renderResults();
+    saveToUrl();
+  }
+
+  function renderNotice() {
+    $('notice').hidden = !notice;
+    $('notice-text').textContent = notice;
   }
 
   function renderVerdict() {
@@ -303,6 +579,177 @@
     $('verdict').innerHTML = daily > 0
       ? `Your day of AI use ≈ <strong>${fmtMetric(daily)}</strong> — ${cmpText}${pctText ? ', ' + pctText : ''}.`
       : `Add a row to see your footprint.`;
+    const other = otherDaily(state.metric);
+    if (other > 0) $('verdict').innerHTML += ` Your other digital use ≈ <strong>${fmtMetric(other)}</strong>.`;
+    if (daily > 0) $('verdict').innerHTML += ` <span class="verdict-cite">(Comparisons and typical footprints: ${cite(['M'])}.)</span>`;
+    renderTotals();
+  }
+
+  // "Your AI use" and "Your other digital use" side by side, each as
+  // low · central · high per day and per year, plus a central comparison.
+  function renderTotals() {
+    const col = (title, day) => {
+      const year = { low: day.low * DAYS, central: day.central * DAYS, high: day.high * DAYS };
+      return `<div class="totals-col"><span class="range-title">${title}</span>` +
+        (day.high > 0
+          ? `<span class="range-line"><span class="range-period">per day</span> ${fmtRange(day)}</span>
+             <span class="range-line"><span class="range-period">per year</span> ${fmtRange(year)}</span>`
+          : '<span class="range-line range-empty">nothing entered</span>') +
+        '</div>';
+    };
+    const ai = aiRange(state.metric);
+    const other = otherRange(state.metric);
+    $('totals').innerHTML = (ai.high > 0 || other.high > 0)
+      ? `<span class="range-key totals-key">low · central · high — <strong>outer bounds</strong>: every assumption at its best or worst case at once, not a likely range</span>${col('Your AI use', ai)}${col('Your other digital use', other)}`
+      : '';
+    $('outer-note').hidden = !(ai.high > 0 || other.high > 0);
+    renderDrivers();
+    let compare = '';
+    if (ai.central > 0 && other.central > 0) {
+      const ratio = ai.central / other.central;
+      compare = ratio >= 1
+        ? `Central estimates: your AI use is about ${sig(ratio)}× your other digital use.`
+        : `Central estimates: your AI use is about ${sig(1 / ratio)}× less than your other digital use.`;
+    } else if (ai.central > 0) {
+      compare = 'Add streaming or call hours to compare your AI use with your other digital use.';
+    }
+    $('totals-compare').textContent = compare;
+  }
+
+  // What drives each total's range (spec feature 5): the top three inputs by
+  // swing in the selected metric, with the energy swing where there is one.
+  function renderDrivers() {
+    const grid = getLoc().grid;
+    const list = (title, rows) => {
+      const ds = Calc.drivers(rows, state.metric, grid, 3);
+      if (!ds.length) return '';
+      return `<div class="drivers-col"><span class="range-title">What drives ${title}</span><ol>` +
+        ds.map((d) => `<li><strong>${d.label}</strong>: a swing of ${fmtMetric(d.swing)}` +
+          (d.energySwing > 1e-9 ? ` (${fmtMetric(d.energySwing, 'energy')})` : '') +
+          ` from its low to its high — ${d.why} (${cite(d.sources)}).</li>`).join('') +
+        '</ol></div>';
+    };
+    $('drivers').innerHTML = list('your AI use range', aiRows()) + list('your other digital use range', otherRows());
+  }
+
+  // ==========================================================================
+  // "How these numbers are made" (spec: a method section per feature with its
+  // calculation, sources, and limitations). Built from data.js so every value
+  // shown matches the calculation, and every value carries a source link.
+  // ==========================================================================
+  // One table row per INPUTS entry: label, low · central · high, borrowed note, sources.
+  function inputRow(id, show) {
+    const x = INPUTS[id];
+    const v = show || ((l) => fmtInput(x[l]));
+    const borrowed = x.borrowed && x.borrowed.length ? ` <span class="borrowed">(${x.borrowed.join(' and ')} borrowed)</span>` : '';
+    return `<tr><td>${x.label}</td><td>${v('low')} · ${v('central')} · ${v('high')} ${x.unit}${borrowed}</td><td>${cite(x.sources)}</td></tr>`;
+  }
+  const inputTable = (rows) => `<table class="method-table"><thead><tr><th>Input</th><th>Low · central · high</th><th>Source</th></tr></thead><tbody>${rows.join('')}</tbody></table>`;
+  const limits = (items) => `<p class="method-sub">Limitations</p><ul>${items.map((t) => `<li>${t}</li>`).join('')}</ul>`;
+  const section = (title, body) => `<section class="method-section"><h3>${title}</h3>${body}</section>`;
+
+  function renderMethod() {
+    const P = INPUTS.pue;
+    const f = INPUTS.providerFactor;
+    const net = INPUTS.streamNetwork;
+    // Text-row entries whose embodied carbon has no range (min = max), counted live.
+    let flat = 0;
+    let entries = 0;
+    MODELS.forEach((m) => SIZES.forEach((sz) => {
+      const e = m.sizes[sz.id];
+      if (!e) return;
+      entries++;
+      if (e.embmin === e.embmax) flat++;
+    }));
+    const heavy = AGENT_SIZES.find((a) => a.id === 'agent-heavy');
+    const light = AGENT_SIZES.find((a) => a.id === 'agent-light');
+    const html = [
+      section('How the ranges work', `
+        <p>Every result is shown as low · central · high. The low value puts every uncertain input at its low end and the high value puts every input at its high end, so both are <strong>outer bounds</strong>: every assumption at its best or worst case at once, not a likely range. Each total is the sum of its rows’ lows, centrals, and highs, and a year is the day × 365. Charts and the donut use central values.</p>
+        <p>“What drives the range” moves one input at a time from its low to its high while everything else stays central; the change in the total is that input’s swing. Inputs shared by several rows (PUE, water factors, network energy, the server proxy) move once across every row that uses them. All text rows’ EcoLogits ranges move together as one input. Grid intensity is the location you choose and is not varied.</p>
+        ${limits([
+          'All-low and all-high is wider than a statistical range, because it assumes every factor is at its extreme at once.',
+          'The ranges reflect only the sources’ figures. They don’t cover unknowns such as commercial tools nobody has measured.',
+          `“Borrowed” ranges are proxies: the laptop’s measured spread (0.6× to 1.47× of its central value; ${cite(INPUTS.laptopPower.sources)}) applied to values with no sourced range.`,
+        ])}`),
+      section('Text replies', `
+        <p>Per-prompt energy, carbon, and water come from the open-source EcoLogits method (v0.10; ${cite([4])}), as carried in the original calculator (${cite(['M'])}). Carbon = energy × the grid intensity of your location, plus EcoLogits’ embodied hardware emissions. Water is EcoLogits’ blue-water figure: freshwater consumed on site and at power plants. Low and high are EcoLogits’ own 95% range for each model and reply length.</p>
+        ${limits([
+          `Embodied hardware carbon has no range in ${flat} of the ${entries} model-and-length entries (EcoLogits gives one value), so for those only the energy part of carbon varies.`,
+          'These are estimates from the EcoLogits method, not measurements published by the providers.',
+          'Model training is excluded; the calculator covers use only.',
+        ])}`),
+      section('Agent sessions', `
+        <p>Wh per session = (fresh-input tokens × input factor + cache-read tokens × input factor × cache-read setting + output tokens × output factor) ÷ 1,000 × PUE. Cache writes count as fresh input. Carbon uses your location’s grid; water uses the data-centre water factor. Results are not model-specific.</p>
+        <p>The light tier is ${light.tokens.toLocaleString('en-US')} tokens in ${light.calls} calls (${cite(light.sources)}); the heavy tier is ${heavy.tokens.toLocaleString('en-US')} tokens in ${heavy.calls} calls (${cite(heavy.sources)}). Both use the same mix: 3.6% fresh input, 96% cache reads, 0.4% output (${cite([13])}). Advanced mode takes your own token counts; your cache-read setting becomes the central value, and the range still spans 1–25%. The authors’ own figures are shown as cross-checks: Couch 41 Wh per median session (${cite([12])}); Hausfather 600 Wh, 250–1,200 (${cite([13])}).</p>
+        ${inputTable([
+          inputRow('providerFactor', (l) => `${f[l].input} in / ${f[l].output} out`),
+          inputRow('cacheRead', (l) => `${Math.round(INPUTS.cacheRead[l] * 100)}%`),
+          inputRow('pue'), inputRow('dcWater'),
+        ])}
+        ${limits([
+          'No source measures agent-session energy directly. The per-token factors are anchored to one Google disclosure, and the cache-read cost is inferred from prices.',
+          'Bistline et al. note that constant per-token factors can undercount long-context work and overcount repeat-context work, so the error can go either way.',
+          'The light tier’s token mix is borrowed from the heavy-tier source.',
+          'Both sessions come from one person’s usage each. Neither author has lab data.',
+          'The estimate is not model-specific.',
+          'Embodied hardware carbon is excluded, unlike the text rows.',
+        ])}`),
+      section('Generated media', `
+        <p>Video Wh = seconds × tier Wh per video-second × PUE. Image Wh = images × tier Wh per image × CPU+RAM factor × PUE. Carbon uses your location’s grid; water uses the data-centre water factor.</p>
+        ${inputTable(['videoSmall', 'videoMid', 'videoLarge', 'imageDraft', 'imageStandard', 'imageHigh', 'cpuRam', 'pue', 'dcWater'].map((id) => inputRow(id)))}
+        <p>Measured models behind each tier: ${Object.values(MEDIA_TIERS).flat().map((t) => `<em>${t.label}</em>: ${t.measured}`).join('; ')}.</p>
+        ${limits([
+          'All figures come from open models on single research GPUs. No commercial tool has been measured.',
+          'Video energy grows quadratically with clip length. The calculation is linear, so clips much longer than about 5 s are likely undercounted.',
+          'Video tiers differ in model, resolution, and frame rate together. None reaches 1080p or 4K.',
+          'The large video tier’s high value is inferred for a commercial tool (Sora 2 Pro), not measured, and it is not stated whether it already includes data-centre overhead.',
+          'The image tier settings are this project’s choice, not the source’s. The CPU+RAM factor is a proxy taken from video models, and RAM energy in that source is estimated, not measured.',
+          'Water is derived from the calculator’s text-model data and depends on unverified WRI inputs. It is not a measured video or image water figure.',
+          'Embodied hardware carbon is excluded, unlike the text rows.',
+        ])}`),
+      section('Streaming', `
+        <p>Wh per hour = device watts + network + data centre. Carbon uses your location’s grid. Water = [(device + network Wh) × off-site factor + data-centre Wh × data-centre factor] ÷ 1,000.</p>
+        <p>Device power is our own derivation (source 10): the IEA’s device share of streaming energy (72% of 0.077 kWh ≈ 55.4 Wh per hour, over a 70% TV / 15% laptop / 10% tablet / 5% phone mix; ${cite([7])}) split using Carbon Brief’s device ratios (TV ≈ 5× laptop ≈ 100× phone; ${cite([8])}), with a tablet assumed at 5× a phone. Weighting the results by the IEA mix gives 55.2 Wh, against the IEA’s 55.4. Network and data centre are the IEA’s 23% and 5% shares (${cite(net.sources)}).</p>
+        ${inputTable([
+          ...STREAMING_DEVICES.map((d) => inputRow(d.input)),
+          inputRow('streamNetwork', (l) => fmtInput(net[l].network + net[l].dc)),
+          inputRow('offsiteWater'), inputRow('dcWater'),
+        ])}
+        <p>Cross-checks, not part of any range: ${STREAMING_CROSS_CHECKS.map((c) => `${c.label} ${c.g} g ${c.gas} per hour (${c.note}; ${cite(c.sources)})`).join('; ')}.</p>
+        ${limits([
+          'Per-device power is our own derivation from 2019 averages and a press fact-check. No primary per-device measurement was found.',
+          'The tablet value is assumed.',
+          'The ranges for phone, tablet, and network, and the TV’s low value, are borrowed from laptop measurements.',
+          'Watching on cellular data uses more network energy than assumed.',
+          'The water factors are back-calculated and unverified.',
+          'Device manufacturing is excluded.',
+        ])}`),
+      section('Video calls', `
+        <p>Wh per hour = device watts + data (GB) × network energy per GB + server proxy. Carbon uses your location’s grid; water uses the streaming water factors. Tablet and desktop are not available: no source measures their power during calls.</p>
+        ${inputTable(['laptopPower', 'callPhoneCamOn', 'callPhoneCamOff', 'callDataCamOn', 'callDataCamOff', 'networkPerGB', 'serverProxy'].map((id) => inputRow(id)))}
+        <p>Cross-checks, not part of any range: ${CALL_CROSS_CHECKS.map((c) => `${c.label}: ${c.text}${c.disputed ? ` (${c.disputed})` : ''} (${cite(c.sources)})`).join('; ')}.</p>
+        ${limits([
+          'There is no laptop call measurement. The laptop value comes from browsing and streaming, so camera and encoding load is likely underestimated.',
+          'The phone values come from one low-end phone measured in 2021. The 3.85 V battery voltage used to convert its battery drain to watts is our assumption, and the camera-off value was measured with the screen off.',
+          'Network energy per GB is derived, and both Mytton and Guennebaud caution against per-GB intensity figures.',
+          'Server energy is a proxy borrowed from streaming.',
+          'Published estimates for calls differ by up to about 50×.',
+          'Device manufacturing is excluded.',
+        ])}`),
+      section('Comparisons', `
+        <p>Everyday and yearly comparison figures (coffee, driving, flights, diet, home energy, and so on), the typical person’s footprint by location, and the location grid intensities are carried over unchanged from Andy Masley’s calculator (${cite(['M'])}), which draws on EPA, EIA, Ember, Our World in Data, Poore &amp; Nemecek (2018), Wynes &amp; Nicholas (2017), the Founders Pledge Climate &amp; Lifestyle report, and the Water Footprint Network; its page lists the full citations. It is used under the author’s public-domain (CC0) release.</p>`),
+      section('Sources', `<ol class="source-list">${Object.entries(SOURCES).map(([n, s]) =>
+        `<li value="${n === 'M' ? '' : n}"><span class="source-n">${n === 'M' ? 'Masley' : n}.</span> ${s.url ? `<a href="${s.url}" target="_blank" rel="noopener">${s.cite}</a>` : `${s.cite} (${s.derivedFrom.map(sourceLink).join(', ')})`}</li>`).join('')}</ol>
+        <p class="method-sub">Numbers match the project’s research notes (research.md), where each source’s checks and limitations are recorded.</p>`),
+    ];
+    $('method-content').innerHTML = html.join('');
+  }
+
+  // Glossary (spec feature 5), opened from the results and the method panel.
+  function renderGlossary() {
+    $('glossary-list').innerHTML = GLOSSARY.map((g) =>
+      `<dt>${g.term}</dt><dd>${g.def}${g.sources.length ? ` <span class="range-key">(${cite(g.sources)})</span>` : ''}</dd>`).join('');
   }
 
   const SERIES = ['var(--series-1)', 'var(--series-2)', 'var(--series-3)', 'var(--series-4)', 'var(--series-5)', 'var(--series-6)'];
@@ -351,22 +798,29 @@
     });
   }
 
+  // Up to `max` bars: every "you" bar above zero, then the largest items.
+  function withYouBars(yous, items, max) {
+    const shown = yous.filter((r) => r.value > 0);
+    const rest = items.filter((r) => r.value > 0).sort((a, b) => b.value - a.value).slice(0, max - shown.length);
+    return shown.concat(rest).sort((a, b) => b.value - a.value);
+  }
   function renderDailyBars() {
-    const daily = aiDaily(state.metric);
-    const rows = [{ label: 'Your AI use', value: daily, isYou: true }]
-      .concat(DAILY_ITEMS.map((it) => ({ label: it.label, value: itemDaily(it, state.metric) })).filter((r) => r.value > 0))
-      .sort((a, b) => b.value - a.value)
-      .slice(0, 8);
-    renderHBars('daily-bars', rows);
+    const yous = [
+      { label: 'Your AI use', value: aiDaily(state.metric), isYou: true },
+      { label: 'Your other digital use', value: otherDaily(state.metric), isYou: true },
+    ];
+    const items = DAILY_ITEMS.map((it) => ({ label: it.label, value: itemDaily(it, state.metric) }));
+    renderHBars('daily-bars', withYouBars(yous, items, 8));
   }
 
   function renderYearBars() {
-    const annual = aiDaily(state.metric) * DAYS;
-    const adds = ANNUAL_ITEMS.filter((it) => it.dir === 'add' && itemAnnual(it, state.metric) > 0)
+    const yous = [
+      { label: 'Your year of AI use', value: aiDaily(state.metric) * DAYS, isYou: true },
+      { label: 'Your year of other digital use', value: otherDaily(state.metric) * DAYS, isYou: true },
+    ];
+    const adds = ANNUAL_ITEMS.filter((it) => it.dir === 'add')
       .map((it) => ({ label: it.label, value: itemAnnual(it, state.metric) }));
-    adds.push({ label: 'Your year of AI use', value: annual, isYou: true });
-    adds.sort((a, b) => b.value - a.value);
-    renderHBars('add-bars', adds.slice(0, 8));
+    renderHBars('add-bars', withYouBars(yous, adds, 8));
 
     const cuts = ANNUAL_ITEMS.filter((it) => it.dir === 'save' && itemAnnual(it, state.metric) > 0)
       .map((it) => ({ label: it.label, value: itemAnnual(it, state.metric), dir: 'save' }))
@@ -390,14 +844,23 @@
     $('fly').innerHTML = optHtml(FLYING, state.fly);
   }
 
-  function render() {
-    renderPersonas();
-    renderMetricToggle();
-    renderRows();
+  // Everything computed from the rows (not the row inputs themselves).
+  function renderResults() {
     renderVerdict();
     renderDonut();
     renderDailyBars();
     renderYearBars();
+  }
+
+  function render() {
+    renderPersonas();
+    renderMetricToggle();
+    renderNotice();
+    renderRows();
+    renderMediaRows();
+    renderStreaming();
+    renderCalls();
+    renderResults();
     renderContextLine();
   }
 
@@ -408,11 +871,25 @@
     b.addEventListener('click', () => { state.metric = b.dataset.metric; render(); saveToUrl(); });
   });
   $('addrow').addEventListener('click', () => {
-    state.rows.push({ id: uidSeq++, model: MODELS[0].id, size: 'chat', count: 3 });
+    state.rows.push(newRow(MODELS[0].id, 'chat', 3));
+    state.persona = null;
+    render(); saveToUrl();
+  });
+  $('call-hours').addEventListener('input', (e) => { state.calls.hours = Math.max(0, Number(e.target.value) || 0); onValues(); });
+  ['device', 'camera'].forEach((k) => {
+    $(`call-${k}`).addEventListener('change', (e) => { state.calls[k] = e.target.value; state.persona = null; render(); saveToUrl(); });
+  });
+  document.querySelectorAll('.glossary-open').forEach((b) => b.addEventListener('click', () => {
+    $('glossary').open = true;
+    $('glossary').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }));
+  $('addmedia').addEventListener('click', () => {
+    state.media.push(newMediaRow('image'));
     state.persona = null;
     render(); saveToUrl();
   });
   $('reset').addEventListener('click', () => { applyPersona('casual'); saveToUrl(); });
+  $('notice-close').addEventListener('click', () => { notice = ''; renderNotice(); });
   $('share').addEventListener('click', async () => {
     saveToUrl();
     try {
@@ -426,6 +903,9 @@
   });
 
   loadFromUrl();
+  renderGlossary();
+  renderMethod();
+  document.querySelectorAll('[data-cite]').forEach((el) => { el.innerHTML = cite(el.dataset.cite.split(',')); });
   render();
 
   // ==========================================================================
@@ -461,12 +941,21 @@
       log.scrollTop = log.scrollHeight;
       return div;
     }
+    // The page's current results for the orb: both totals as ranges, and the
+    // inputs that drive each range most (spec: pass the new totals as context).
     function currentContext() {
-      const daily = aiDaily(state.metric);
+      const yearly = (r) => ({ low: r.low * DAYS, central: r.central * DAYS, high: r.high * DAYS });
+      const names = (rows) => Calc.drivers(rows, state.metric, getLoc().grid, 3).map((d) => d.label).join(', ') || 'none';
+      const ai = aiRange(state.metric);
+      const other = otherRange(state.metric);
       return {
         metric: state.metric,
-        dailyValue: fmtMetric(daily),
-        annualValue: fmtMetric(daily * DAYS),
+        aiDaily: fmtRange(ai),
+        aiYearly: fmtRange(yearly(ai)),
+        aiDrivers: names(aiRows()),
+        otherDaily: other.high > 0 ? fmtRange(other) : 'nothing entered',
+        otherYearly: other.high > 0 ? fmtRange(yearly(other)) : 'nothing entered',
+        otherDrivers: names(otherRows()),
         persona: state.persona || 'custom',
         region: getLoc().label,
       };

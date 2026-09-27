@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Your AI Footprint</title>
-<meta name="description" content="See the carbon and water footprint of your own AI use — pick a persona, adjust your usage, and ask the orb a question about what it means.">
+<meta name="description" content="Estimate the energy, carbon, and water of your AI use and everyday digital activities, as ranges with their sources.">
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -15,9 +15,10 @@
     <div class="hero-text">
       <h1>Your AI footprint</h1>
       <p class="dek">
-        A few prompts a day adds up to a carbon and water cost — usually a much smaller one than people
-        assume. Pick the persona closest to how you use AI, adjust it to match your real day, and see
-        exactly where it lands next to everyday things. Ask the orb anything about the numbers.
+        Estimate the energy, carbon, and water of your AI use (text, images, video, and coding agents) and
+        see it next to your streaming and video calls. Every result is a low · central · high range with
+        its sources, so you can judge the numbers for yourself. Pick a profile, adjust it to your day, or
+        ask the orb about the numbers.
       </p>
     </div>
     <div class="orb-dock">
@@ -46,6 +47,7 @@
 
   <nav class="personas" aria-label="Usage personas">
     <div class="personas-row" id="personas"></div>
+    <div class="personas-row" id="profiles"><span class="profiles-label">Profiles, illustrative; adjust to your own day:</span></div>
   </nav>
 
   <div class="metric-toggle" role="group" aria-label="Footprint type">
@@ -54,6 +56,7 @@
   </div>
 
   <main class="tool">
+    <div class="tool-col">
     <section class="panel panel-in" aria-label="Your daily AI use">
       <div class="panel-head">
         <h2>Your AI use</h2>
@@ -62,8 +65,19 @@
       <div class="rows-head" aria-hidden="true">
         <span>Model</span><span>Reply length</span><span>Per day</span><span></span>
       </div>
+      <p class="notice" id="notice" hidden><span id="notice-text"></span> <button type="button" class="link" id="notice-close">Dismiss</button></p>
       <div class="rows" id="rows"></div>
       <button type="button" class="addrow" id="addrow">+ add another</button>
+
+      <div class="media-group">
+        <h3 class="group-title">Generated media</h3>
+        <p class="group-note">Figures come from open models measured on single research GPUs; no commercial video or image tool has been measured. Embodied hardware carbon is not included.</p>
+        <div class="rows-head" id="media-head" aria-hidden="true">
+          <span>Type</span><span>Tier</span><span>Per day</span><span></span>
+        </div>
+        <div class="rows" id="media-rows"></div>
+        <button type="button" class="addrow" id="addmedia">+ add video or images</button>
+      </div>
       <div class="tools-row">
         <button type="button" class="link" id="reset">Reset</button>
         <span class="sep">·</span>
@@ -71,27 +85,63 @@
       </div>
     </section>
 
+    <section class="panel panel-other" aria-label="Your other digital use">
+      <div class="panel-head">
+        <h2>Your other digital use</h2>
+        <span class="panel-head-sub">per day</span>
+      </div>
+      <h3 class="group-title">Streaming video</h3>
+      <p class="group-note">Device power is our own derivation from 2019 averages; no primary per-device measurement was found. Watching on cellular data uses more network energy than assumed. Device manufacturing is not included.</p>
+      <div class="stream-rows" id="stream-rows"></div>
+      <p class="group-note" id="stream-network"></p>
+      <p class="group-note" id="stream-xcheck"></p>
+
+      <div class="calls-group">
+        <h3 class="group-title">Video calls</h3>
+        <p class="group-note">No laptop call has been measured: the laptop value comes from browsing and streaming, so camera and encoding load is likely underestimated. Published estimates for calls differ by up to about 50×. Device manufacturing is not included.</p>
+        <div class="call-inputs">
+          <label>Hours per day <input type="number" id="call-hours" min="0" step="0.5" inputmode="decimal"></label>
+          <label>Device <select id="call-device"></select></label>
+          <label>Camera <select id="call-camera"><option value="on">On</option><option value="off">Off</option></select></label>
+        </div>
+        <p class="call-unavailable" id="call-unavailable" hidden></p>
+        <div class="stream-results" id="call-results"></div>
+        <p class="group-note" id="call-parts"></p>
+        <p class="group-note" id="call-basis"></p>
+        <p class="group-note" id="call-xcheck"></p>
+      </div>
+    </section>
+    </div>
+
     <section class="panel panel-out" aria-label="How it compares">
       <div class="verdict" id="verdict"></div>
+      <div class="totals" id="totals"></div>
+      <p class="totals-compare" id="totals-compare"></p>
+      <p class="outer-note" id="outer-note" hidden>Low adds up every input’s low value and high every input’s high value, so each end assumes everything goes one way at once. The ranges only reflect the sources’ figures; they don’t cover unknowns such as commercial tools nobody has measured. <button type="button" class="link glossary-open">Glossary</button></p>
+      <div class="drivers" id="drivers"></div>
       <div class="donut-wrap">
         <div class="donut" id="donut"></div>
         <ul class="donut-legend" id="donut-legend"></ul>
       </div>
+      <p class="chart-note">Chart shows each AI row’s share of the central estimate.</p>
     </section>
   </main>
 
   <section class="chart-section" aria-label="A day of your AI use vs everyday things">
     <h2>A day of your AI use, next to everyday things</h2>
+    <p class="chart-note">Your AI use and other digital use are shown at their central estimates. Comparison figures: <span data-cite="M"></span>.</p>
     <div class="hbars" id="daily-bars"></div>
   </section>
 
   <section class="chart-section split" aria-label="A year of AI use, next to bigger choices">
     <div class="split-col">
       <h2 id="add-title">In a year, things that add this much</h2>
+      <p class="chart-note">Your year of AI use and other digital use are shown at their central estimates. Comparison figures: <span data-cite="M"></span>.</p>
       <div class="hbars hbars--compact" id="add-bars"></div>
     </div>
     <div class="split-col">
       <h2 id="cut-title">In a year, cuts that would save this much</h2>
+      <p class="chart-note">Figures: <span data-cite="M"></span>.</p>
       <div class="hbars hbars--compact" id="cut-bars"></div>
     </div>
   </section>
@@ -107,24 +157,18 @@
     </p>
   </section>
 
-  <details class="method">
+  <details class="method" id="method">
     <summary>How these numbers are made</summary>
     <div class="method-body">
-      <p>
-        Per-prompt energy, carbon, and water figures come from the open-source
-        <a href="https://ecologits.ai/" target="_blank" rel="noopener">EcoLogits</a> library (v0.10). Carbon is
-        priced on the electricity grid of the region you compare against, plus EcoLogits' embodied hardware
-        emissions. Water is EcoLogits' blue-water (freshwater actually consumed) figure. Training is excluded —
-        split across all users it adds very little to any one person's footprint.
-      </p>
-      <p>
-        Everyday and yearly comparison figures (diet, driving, flights, home energy, coffee, flights, lawns, and
-        so on) are drawn from EPA, EIA, Ember, Our World in Data, Poore &amp; Nemecek (2018), Wynes &amp; Nicholas
-        (2017), the Founders Pledge Climate &amp; Lifestyle report, and the Water Footprint Network. Full citation
-        list and methodology adapted from Andy Masley's
-        <a href="https://andymasley.com/visuals/ai-prompt-footprint/" target="_blank" rel="noopener">AI prompt footprint calculator</a>,
-        used under his public-domain (CC0) release.
-      </p>
+      <div id="method-content"></div>
+      <p><button type="button" class="link glossary-open">Glossary of terms</button></p>
+    </div>
+  </details>
+
+  <details class="method" id="glossary">
+    <summary>Glossary</summary>
+    <div class="method-body">
+      <dl class="glossary" id="glossary-list"></dl>
     </div>
   </details>
 
@@ -136,9 +180,32 @@
     <select class="row-size"></select>
     <input type="number" class="row-count" min="0" step="1" inputmode="numeric">
     <button type="button" class="row-remove" aria-label="Remove row">×</button>
+    <div class="row-range"></div>
+    <div class="agent-detail" hidden></div>
   </div>
 </template>
 
+<template id="stream-tpl">
+  <div class="stream-row">
+    <label class="stream-label"><span class="stream-name"></span>
+      <input type="number" class="stream-hours" min="0" step="0.5" inputmode="decimal"> <span class="stream-unit">h per day</span></label>
+    <p class="stream-power"></p>
+    <div class="stream-results"></div>
+  </div>
+</template>
+
+<template id="media-tpl">
+  <div class="row media-row">
+    <select class="media-type" aria-label="Media type"></select>
+    <select class="media-tier" aria-label="Tier"></select>
+    <input type="number" class="media-amount" min="0" step="1" inputmode="numeric">
+    <button type="button" class="row-remove" aria-label="Remove row">×</button>
+    <div class="media-detail"></div>
+  </div>
+</template>
+
+<script src="data.js"></script>
+<script src="calc.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

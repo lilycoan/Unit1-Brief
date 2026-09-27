@@ -32,4 +32,10 @@ When user directs agent to save transcript, save entire text of current session 
 
 # Project
 
-Fill in as the project takes shape: how to run it locally, how to test it, and any commands or structure that aren't obvious from the code.
+Employee-facing AI footprint calculator (Project 2). Static site, no build step; `brief.md` → `research.md` → `spec.md` → `plan.md` hold the approved requirements.
+
+- **Run:** `npx serve .` (or open `index.html`). The voice orb needs `vercel dev` and `ANTHROPIC_API_KEY`; the calculator works without it.
+- **Test:** `node test/acceptance.js` checks every numeric acceptance check in `spec.md` (prints PASS/FAIL, exits 1 on failure). `node test/check-links.js` checks every citation URL; publishers that block scripts need a manual click-through.
+- **Structure:** `data.js` declares every input once (low · central · high, sources, reason) plus `SOURCES` (numbered as in `research.md`) and the glossary; `calc.js` is pure calculation (browser and Node); `app.js` is rendering, state, share link, method panel, and the orb; `api/ask.js` is the orb's serverless function.
+- **Adding or changing a number:** change it in `data.js` only, cite its `research.md` source, and add or update the matching check in `test/acceptance.js`. The method panel is generated from `data.js`, so it updates itself.
+- **Share link:** state lives in the URL hash (`r`, `m`, `s`, `c`, plus metric and context). Don't use `#anchor` links on the page; they would overwrite it.
