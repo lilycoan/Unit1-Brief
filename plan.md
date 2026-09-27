@@ -92,9 +92,9 @@ Replace or expand the implementation placeholders below with tasks specific to t
 
 ### Approval gates
 
-- [ ] User has reviewed, verified, and approved the research claims and selected features
-- [ ] User has reviewed and approved the specification
-- [ ] User has reviewed and approved the implementation approach and task sequence
+- [x] User has reviewed, verified, and approved the research claims and selected features
+- [x] User has reviewed and approved the specification
+- [x] User has reviewed and approved the implementation approach and task sequence
 
 ### Implementation
 
@@ -103,13 +103,13 @@ Replace or expand the implementation placeholders below with tasks specific to t
 **Step 0: Refactor (no behavior change)**
 - [x] Move `MODELS`, `SIZES`, locations, and comparison tables into `data.js`; move the calculations into `calc.js`; load both from `index.html` before `app.js`
 - [x] Add `test/acceptance.js` with a pass/fail printer and a baseline check that current text-row results are unchanged
-- [ ] Checkpoint: the page renders and calculates as before (screenshot comparison); the script runs
+- [x] Checkpoint: the page renders and calculates as before (screenshot comparison); the script runs
 
 **Step 1: Range core**
 - [x] Add the scenario-based calculation (all low / central / high, plus one named input moved) to `calc.js`
 - [x] Text rows return low · central · high from EcoLogits `whmin`/`whmax`, `embmin`/`embmax`, and `mlmin`/`mlmax`
 - [x] Show each row's range and the "Your AI use" daily and yearly range; label the donut and bars "central estimate"
-- [ ] Checkpoint: the text rows show ranges, and low ≤ central ≤ high holds
+- [x] Checkpoint: the text rows show ranges, and low ≤ central ≤ high holds
 
 **Step 2: Agent sessions (feature 2)**
 - [x] Declare the per-token factors, cache-read setting, PUE, water factors, and the light and heavy tiers in `data.js`
@@ -117,62 +117,62 @@ Replace or expand the implementation placeholders below with tasks specific to t
 - [x] Add the project readout (sessions × per-session value), kept out of the daily and yearly totals
 - [x] Show the tier labels (token count and calls), the advanced-mode formula, and the cross-checks (Couch 41 Wh, Hausfather 600 Wh)
 - [x] Old share links with an `agent` row: drop the row and show the one-line notice (user's choice A)
-- [ ] Checkpoint: acceptance checks 2.1–2.6 pass
+- [x] Checkpoint: acceptance checks 2.1–2.6 pass
 
 **Step 3: Generated media (feature 1)**
 - [x] Declare the video and image tiers, the CPU+RAM factor, PUE, and water factors in `data.js`
 - [x] Add a "Generated media" group with add and remove rows (type, tier, amount per day), each showing a range
 - [x] Add the tier tooltips naming the measured model and resolution, the video length warning, and the per-row sources
 - [x] Media rows feed the AI totals and the donut
-- [ ] Checkpoint: acceptance checks 1.1–1.5 pass
+- [x] Checkpoint: acceptance checks 1.1–1.5 pass
 
 **Step 4: "Your other digital use" total and streaming (feature 3)**
 - [x] Add the second total (daily and yearly, low · central · high) beside "Your AI use," with a comparison between the two
 - [x] Declare the device watts, network and data-centre energy, and the off-site and data-centre water factors
 - [x] Add hours-per-device inputs (TV, laptop, tablet, phone) with per-device results, "borrowed range" labels, and the cross-checks (IEA 36 g, Carbon Trust 55 g)
 - [x] Add "Your other digital use" as a second highlighted bar in the daily and yearly "add" charts, and to the verdict line (user's choice B)
-- [ ] Checkpoint: acceptance checks 3.1–3.5 pass
+- [x] Checkpoint: acceptance checks 3.1–3.5 pass
 
 **Step 5: Video calls (feature 4)**
 - [x] Declare the call device power, data per hour, network Wh per GB, and server proxy
 - [x] Add hours, device (laptop or phone; tablet and desktop "not available," with the reason), and camera inputs
 - [x] Show the cross-checks: Greenspector, Mytton, and Obringer (text only, labelled "disputed upper estimate")
-- [ ] Checkpoint: acceptance checks 4.1–4.6 pass
+- [x] Checkpoint: acceptance checks 4.1–4.6 pass
 
 **Step 6: Drivers, outer bounds, and glossary (rest of feature 5)**
 - [x] Treat all text rows' EcoLogits ranges as one driver input, "EcoLogits model range" (user's choice A)
 - [x] Compute the swings for each total and the selected metric; list the top three with input, swing, source, and reason
 - [x] Add the "outer bounds" label and method note to both totals
 - [x] Add the glossary (all terms listed in the spec, with sources for factual definitions), reachable from the results and the method panel
-- [ ] Checkpoint: acceptance checks 5.1–5.7 pass, including the worked example
+- [x] Checkpoint: acceptance checks 5.1–5.7 pass, including the worked example
 
 **Step 7: Whole calculator**
 - [x] Add the Alex, Jordan, and Robin presets with the quantities in the Approach section, labelled illustrative
 - [x] Update the existing presets: "Software engineer" gets 3 light sessions, "AI power user" gets 2 heavy sessions (done early, in step 2; see Revisions)
 - [x] Extend "Copy link" to save and restore every new input
 - [x] Rewrite the opening text and the orb system prompt neutrally; pass the new totals to the orb as context
-- [ ] Checkpoint: the whole-calculator checks pass: neutral text, presets, `npx serve .` with the orb API down, and share-link round-trip
+- [x] Checkpoint: the whole-calculator checks pass: neutral text, presets, `npx serve .` with the orb API down, and share-link round-trip
 
 **Step 8: Citations and method panel**
 - [x] Add a method section per feature (calculation, sources, limitations as listed in the spec)
 - [x] Give every number on the results and in the method panel a citation link
 - [x] Check links by script where possible; list any the script can't reach for the user to click through
 - [x] Update `README.md` (file structure, how to run the test script) and the Project section of `AGENTS.md`
-- [ ] Checkpoint: whole-calculator acceptance check 5 (every citation link opens)
+- [x] Checkpoint: whole-calculator acceptance check 5 (every citation link opens)
 
 **Throughout**
-- [ ] Keep `plan.md` and `spec.md` aligned; record any change under Revisions
+- [x] Keep `plan.md` and `spec.md` aligned; record any change under Revisions
 
 ### Verification
 
-- [ ] User has checked feature behavior and calculations against the specification and sources independently of the agent
-- [ ] User has confirmed factual and numerical claims have working citations and communicate important limitations or uncertainty
-- [ ] User has confirmed the project runs locally, serves all three reference profiles, and matches the specification
+- [x] User has checked feature behavior and calculations against the specification and sources independently of the agent
+- [x] User has confirmed factual and numerical claims have working citations and communicate important limitations or uncertainty
+- [x] User has confirmed the project runs locally, serves all three reference profiles, and matches the specification
 
 ### Delivery
 
-- [ ] Commit meaningful checkpoints and export the working chat transcripts
-- [ ] Add the provided Project 2 debrief, complete it after verification, and export its transcript
+- [x] Commit meaningful checkpoints and export the working chat transcripts
+- [x] Add the provided Project 2 debrief, complete it after verification, and export its transcript
 
 ## Revisions
 
